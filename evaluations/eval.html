@@ -226,56 +226,69 @@ th:not(:has(> span.commentaire-header)) {
   <div id="competencesSollicitees"></div>
 
   <script>
-    // Verifier si l'utilisateur est un adulte -----------------------------------------------
-    // Pour récupérer la variable admin
-    let isAdmin = JSON.parse(localStorage.getItem('admin'));
+    // Vérifier si l'utilisateur est un adulte -----------------------------------------------
+let isAdmin = JSON.parse(localStorage.getItem('admin')) || false;
 
-    // Fonction pour afficher la boîte de dialogue de mot de passe
-    function showPasswordDialog() {
-        document.getElementById('overlay').style.display = 'block';
-        document.getElementById('dialog').style.display = 'block';
+// Fonction qui ferme la boîte de dialogue
+function closeDialog() {
+    document.getElementById('overlay').style.display = 'none';
+    document.getElementById('dialog').style.display = 'none';
+    document.getElementById('passwordInput').value = ''; // Réinitialiser le champ de saisie
+}
 
-        const passwordInput = document.getElementById('passwordInput');
-        passwordInput.focus();
+// Fonction qui valide le mot de passe
+function validatePassword(password) {
+    return password === "1968" || password === "dirvaulx";
+}
 
-        // Écouteur d'événements pour la touche ENTER
-        passwordInput.addEventListener('keydown', function(event) {
-            if (event.key === 'Enter') {
-                const password = passwordInput.value;
-                if (password === "1968" || password === "dirvaulx") {
-                    closeDialog();
-                } else {
-                    alert("Code adulte requis");
-                }
-            }
-        });
+// Fonction pour afficher la boîte de dialogue de mot de passe
+function showPasswordDialog() {
+    document.getElementById('overlay').style.display = 'block';
+    document.getElementById('dialog').style.display = 'block';
 
-        document.getElementById('confirmButton').onclick = function() {
+    const passwordInput = document.getElementById('passwordInput');
+    passwordInput.focus();
+}
+
+if (!isAdmin) {
+    showPasswordDialog();
+
+    const passwordInput = document.getElementById('passwordInput');
+
+    // Écouteur touche ENTER (à placer ici pour éviter doublons)
+    passwordInput.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
             const password = passwordInput.value;
-            if (password === "1968" || password === "dirvaulx") {
+            if (validatePassword(password)) {
+                localStorage.setItem('password', password);  // Stocker le mot de passe
+                localStorage.setItem('admin', true);          // Mémoriser que c'est un admin
                 closeDialog();
+                isAdmin = true;
             } else {
-                window.top.location.href = "../index.html";
+                alert("Code adulte requis");
             }
-        };
+        }
+    });
 
-        document.getElementById('cancelButton').onclick = function() {
+    document.getElementById('confirmButton').onclick = function() {
+        const password = passwordInput.value;
+        if (validatePassword(password)) {
+            localStorage.setItem('password', password);
+            localStorage.setItem('admin', true);
+            closeDialog();
+            isAdmin = true;
+        } else {
             window.top.location.href = "../index.html";
-        };
-    }
+        }
+    };
 
-    function closeDialog() {
-        document.getElementById('overlay').style.display = 'none';
-        document.getElementById('dialog').style.display = 'none';
-        document.getElementById('passwordInput').value = ''; // Réinitialiser le champ de saisie
-    }
-    // Vérifie si l'utilisateur est admin
-    if (isAdmin) {
-        // tout est ok : ne rien faire
-    } else {
-        showPasswordDialog();
-    }
-    // ---------------------------------------------------------------------------------------
+    document.getElementById('cancelButton').onclick = function() {
+        window.top.location.href = "../index.html";
+    };
+} else {
+    // L'utilisateur est déjà admin, ne rien faire
+}
+//-----------------------------------------------------------
     
     // variables globales pour personnaliser l'impression de la page
     let domaineActuel = "";
