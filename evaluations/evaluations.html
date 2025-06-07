@@ -18,6 +18,17 @@
       --border-radius: 10px;
       --transition-speed: 0.35s;
       }
+      @font-face {
+      font-family: 'ComicSansMS';
+      src: url('../polices/ComicSansMS.woff2') format('woff2'),
+            url('../polices/ComicSansMS.ttf') format('truetype');
+      }
+
+      * {
+      box-sizing: border-box;
+      border-radius: 10px;
+      font-family: 'ComicSansMS', sans-serif;
+      }
 /* Base générale */
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -165,51 +176,10 @@ select {
   cursor: pointer;
 }
 
-/* Style pour la boîte de dialogue */
-#dialog {
-    position: fixed;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    border: 1px solid #ccc;
-    border-radius: 22px;
-    padding: 20px;
-    background-color: white;
-    z-index: 1000;
-    width: 210px;
-}
-#overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.95);
-    z-index: 999;
-}
-#passwordInput{
-    width: 90%;
-}
-#confirmButton {
-    background: var(--green);
-    width: 150px;
-
-}
-#cancelButton {
-    background: var(--rouge);
-    width: 150px;
-
-}
   </style>
 </head>
 <body>
-  <div id="overlay" style="display: none;"></div>
-  <div id="dialog"  style="display: none;">
-      <label for="passwordInput">Mot de passe :</label>
-      <input type="password" id="passwordInput"/>
-      <button id="confirmButton">Valider</button>
-      <button id="cancelButton">Annuler</button>
-  </div>
+
 
 
   <h1>📚 Évaluations</h1>
@@ -247,73 +217,13 @@ select {
   </div>
   
   
-  
+<div style="position: absolute; top: 0.6rem; right: 1.6rem;">
+  <a href="/logout" style="text-decoration: none; font-size: 1rem; color: red;">❌ deconnexion</a>
+</div>
+
+
 
   <script>
-    // Vérifier si l'utilisateur est un adulte -----------------------------------------------
-let isAdmin = JSON.parse(localStorage.getItem('admin')) || false;
-
-// Fonction qui ferme la boîte de dialogue
-function closeDialog() {
-    document.getElementById('overlay').style.display = 'none';
-    document.getElementById('dialog').style.display = 'none';
-    document.getElementById('passwordInput').value = ''; // Réinitialiser le champ de saisie
-}
-
-// Fonction qui valide le mot de passe
-function validatePassword(password) {
-    return password === "1968" || password === "dirvaulx";
-}
-
-// Fonction pour afficher la boîte de dialogue de mot de passe
-function showPasswordDialog() {
-    document.getElementById('overlay').style.display = 'block';
-    document.getElementById('dialog').style.display = 'block';
-
-    const passwordInput = document.getElementById('passwordInput');
-    passwordInput.focus();
-}
-
-if (!isAdmin) {
-    showPasswordDialog();
-
-    const passwordInput = document.getElementById('passwordInput');
-
-    // Écouteur touche ENTER (à placer ici pour éviter doublons)
-    passwordInput.addEventListener('keydown', function(event) {
-        if (event.key === 'Enter') {
-            const password = passwordInput.value;
-            if (validatePassword(password)) {
-                localStorage.setItem('password', password);  // Stocker le mot de passe
-                localStorage.setItem('admin', true);          // Mémoriser que c'est un admin
-                closeDialog();
-                isAdmin = true;
-            } else {
-                alert("Code adulte requis");
-            }
-        }
-    });
-
-    document.getElementById('confirmButton').onclick = function() {
-        const password = passwordInput.value;
-        if (validatePassword(password)) {
-            localStorage.setItem('password', password);
-            localStorage.setItem('admin', true);
-            closeDialog();
-            isAdmin = true;
-        } else {
-            window.top.location.href = "../index.html";
-        }
-    };
-
-    document.getElementById('cancelButton').onclick = function() {
-        window.top.location.href = "../index.html";
-    };
-} else {
-    // L'utilisateur est déjà admin, ne rien faire
-}
-//-----------------------------------------------------------
-
 
     let evaluations = [];
 
@@ -494,6 +404,20 @@ function redirigerVersEleve() {
   document.getElementById('selectAnnee').addEventListener('click', function(){
     document.getElementById('message').style.display = "none";
   });
+  </script>
+
+  <script>
+    // Vérifie avec le serveur si l'utilisateur est connecté
+    fetch('/api/check-session')
+      .then(res => {
+        if (!res.ok) {
+          // Si pas connecté, redirige vers la page de login
+          window.location.href = '/login';
+        }
+      })
+      .catch(() => {
+        window.location.href = '/login';
+      });
   </script>
 </body>
 </html>

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Zone protégée</title>
+</head>
+<body>
+  <h1>Bienvenue dans la zone protégée</h1>
+  <a href="/logout">Déconnexion</a>
+
+  <script>
+    // Vérifie avec le serveur si l'utilisateur est connecté
+    fetch('/api/check-session')
+      .then(res => {
+        if (!res.ok) {
+          // Si pas connecté, redirige vers la page de login
+          window.location.href = '/login';
+        }
+      })
+      .catch(() => {
+        window.location.href = '/login';
+      });
+  </script>
+</body>
+</html>

@@ -1,26 +1,80 @@
+require('dotenv').config();
 const express = require('express');
-const fs = require('fs');
+const session = require('express-session');
+const bcrypt = require('bcrypt');
 const path = require('path');
+const fs = require('fs');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 
-// autoriser la visualisation de l'IP des ordinateurs
-app.set('trust proxy', true);
+const PASSWORD_HASH = process.env.PASSWORD_HASH;
+const SESSION_SECRET = process.env.SESSION_SECRET;
 
-// Middleware pour analyser le corps des requêtes JSON
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
+app.use(session({
+    secret: SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+}));
 
-// Middleware pour servir des fichiers statiques
-app.use(express.static(path.join(__dirname))); // Cela sert tous les fichiers dans le répertoire courant
+app.use(express.static(path.join(__dirname, 'public')));
 
-
-// Route pour afficher index.html
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.redirect('/login');  // racine redirige vers login
 });
+
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: 'Trop de tentatives, veuillez réessayer plus tard.'
+});
+
+app.post('/login', loginLimiter, async (req, res) => {
+  const { password } = req.body;
+  const match = await bcrypt.compare(password, PASSWORD_HASH);
+
+  if (match) {
+    req.session.isAdmin = true;
+    res.redirect('/admin');
+  } else {
+    res.send('<h1>Mot de passe incorrect</h1><a href="/login">Retour</a>');
+  }
+});
+
+app.get('/admin', (req, res) => {
+  if (req.session.isAdmin) {
+    res.sendFile(path.join(__dirname, 'evaluations', 'evaluations.html'));
+  } else {
+    res.redirect('/login');
+  }
+});
+
+app.get('/logout', (req, res) => {
+  req.session.destroy(() => {
+    res.redirect('/login');
+  });
+});
+
+app.get('/api/check-session', (req, res) => {
+  if (req.session.isAdmin) {
+    res.sendStatus(200); // OK, connecté
+  } else {
+    res.sendStatus(401); // Non autorisé, pas connecté
+  }
+});
+
+// autoriser la visualisation de l'IP des ordinateurs
+app.set('trust proxy', false);
+
+
 
 function getRequestInfo(req) {
   const ip = req.ip || req.connection.remoteAddress;
