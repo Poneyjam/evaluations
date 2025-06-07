@@ -1,0 +1,24 @@
+{
+  "annee": "2024-2025",
+  "periode": "P5",
+  "domaine": "de - P5",
+  "eleves": [
+    {
+      "nom": "E",
+      "prof": "E"
+    }
+  ],
+  "competences": [
+    "AT7",
+    "AT5",
+    "commentaire"
+  ],
+  "etat": "en cours",
+  "scores": {
+    "E": {
+      "AT7": null,
+      "AT5": null,
+      "commentaire": null
+    }
+  }
+}

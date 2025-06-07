@@ -2,6 +2,8 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <title>Évaluation – Édition</title>
 
   <style>
@@ -151,6 +153,76 @@ th:not(:has(> span.commentaire-header)) {
   background-color: orange;
 }
 
+
+/* Optimisation pour petits écrans en mode paysage */
+@media screen and (max-width: 768px) {
+  .control-button {
+    margin: 0.5rem;
+    width: 95%;
+    height: 2rem;
+  }
+  #changeEtat{
+    position: fixed;
+    right: 5px;
+    top: 8px;
+  }
+    h1 {
+    font-size: large;
+  }
+  table {
+    margin-bottom: 7rem;
+  }
+}
+
+@media screen and (max-width: 768px) and (orientation: landscape) {
+  body {
+    font-size: 12px; /* Réduire la taille de la police */
+  }
+
+  table#evalTable {
+    display: block;
+    overflow-x: auto; /* Scroll horizontal si trop large */
+    -webkit-overflow-scrolling: touch; /* Pour un scroll fluide sur iOS */
+    table-layout: fixed; /* Colonnes fixes pour éviter trop d’étirement */
+    width: 100%;
+    margin-bottom: 5rem;
+  }
+
+  table#evalTable thead, 
+  table#evalTable tbody, 
+  table#evalTable tr {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+  }
+
+  th, td {
+    padding: 4px 6px;
+    font-size: 10px;
+    white-space: nowrap; /* Empêche le retour à la ligne sauf sur commentaire */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 80px; /* Largeur max des colonnes (sauf commentaire) */
+  }
+
+  /* Pour la colonne commentaire, autoriser le wrapping et une largeur plus large */
+  td[data-comp="commentaire"], 
+  th:has(> span.commentaire-header) {
+    white-space: normal;
+    max-width: 250px;
+    text-align: left;
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+
+  /* Pour que le header soit visible en scroll */
+  thead {
+    display: table-header-group;
+  }
+  
+}
+
+
   </style>
 </head>
 <body>
@@ -164,12 +236,12 @@ th:not(:has(> span.commentaire-header)) {
   </table>
 
   <br>
-  <button id="backBtn" class="noPrint" style="border: 2px solid #999;" onclick="window.location.href='./evaluations.html';">🔙 Retour</button>
-  <button id="printBtn" class="noPrint" style="border: 2px solid #1e90ff;" onclick="imprimer()">🖨️ Imprimer</button>
-  <button id="ajouterEleveBtn" class="noPrint" style="border: 2px solid #28a745;">➕ Ajouter un nouvel élève</button>
-  <button id="supprimerEleveBtn" class="noPrint" style="border: 2px solid #dc3545;">🗑️ Supprimer un élève</button>
-  <button id="ajouterCompetenceBtn" class="noPrint" style="border: 2px solid #ffc107;">➕ Ajouter une compétence</button>
-  <button id="supprimerCompetenceBtn" class="noPrint" style="border: 2px solid #fd7e14;">🗑️ Supprimer une compétence</button>
+  <button id="backBtn" class="noPrint control-button" style="border: 2px solid #999;" onclick="window.location.href='./evaluations.html';">🔙 Retour</button>
+  <button id="printBtn" class="noPrint control-button" style="border: 2px solid #1e90ff;" onclick="imprimer()">🖨️ Imprimer</button>
+  <button id="ajouterEleveBtn" class="noPrint control-button" style="border: 2px solid #28a745;">➕ Ajouter un nouvel élève</button>
+  <button id="supprimerEleveBtn" class="noPrint control-button" style="border: 2px solid #dc3545;">🗑️ Supprimer un élève</button>
+  <button id="ajouterCompetenceBtn" class="noPrint control-button" style="border: 2px solid #ffc107;">➕ Ajouter une compétence</button>
+  <button id="supprimerCompetenceBtn" class="noPrint control-button" style="border: 2px solid #fd7e14;">🗑️ Supprimer une compétence</button>
   
 
   <button id="exportCSVBtn" class="noPrint" style="border: 2px solid #6f42c1; display: none;">📤 Exporter en CSV</button>
@@ -181,10 +253,9 @@ th:not(:has(> span.commentaire-header)) {
   <button id="changeEtat" class="etatButton noPrint" onclick="changerEtat()"></button>
   <div id="competencesSollicitees"></div>
   
-<div style="text-align: right;">
-  <a href="/logout" style="text-decoration:none; color: red;">Déconnexion</a>
-</div>
-  <script>
+
+
+<script>
     
     // variables globales pour personnaliser l'impression de la page
     let domaineActuel = "";
@@ -703,9 +774,9 @@ window.addEventListener("beforeprint", (evenement) => {
 
 
 
-  </script>
+</script>
 
-  <script>
+<script>
     // Vérifie avec le serveur si l'utilisateur est connecté
     fetch('/api/check-session')
       .then(res => {

@@ -1,0 +1,22 @@
+{
+  "annee": "2024-2025",
+  "periode": "P5",
+  "domaine": "test - P5",
+  "eleves": [
+    {
+      "nom": "Ello",
+      "prof": "Ler"
+    }
+  ],
+  "competences": [
+    "L23",
+    "commentaire"
+  ],
+  "etat": "en cours",
+  "scores": {
+    "Ello": {
+      "L23": null,
+      "commentaire": null
+    }
+  }
+}

@@ -2,6 +2,8 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <title>Créer une évaluation</title>
   <style>
     :root {
@@ -201,6 +203,62 @@
       background-color: var(--lightGreen);
       color: white;
     }
+#message {
+  color: red;
+  font-weight: bold;
+  font-size: 1rem;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 6px;
+  background-color: var(--background-color);
+  max-width: 600px;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+/* Responsive : s'assurer que le message prend bien la largeur dispo */
+@media (max-width: 600px) {
+  #message {
+    position: fixed;
+    top: 1px;
+    max-width: 100%;
+    font-size: 1.1rem;
+    padding: 12px 15px;
+  }
+
+    h1{
+      font-size: large;
+    }
+  .form-container {
+    flex-direction: column;
+    align-items: center; /* centre les sections */
+  }
+
+  .form-left, .form-right {
+    flex: unset;
+    width: 100%;
+    max-width: 400px;
+    margin-bottom: 3px;
+    align-items: stretch; /* pour que les éléments internes prennent toute la largeur */
+  }
+
+  .form-right {
+    align-items: center;
+  }
+
+  #listeCompetences {
+    width: 100%;
+    max-width: none;
+  }
+
+  .form-right button {
+    width: 100%; /* bouton prend toute la largeur */
+  }
+
+}
+
+
 </style>
 
     

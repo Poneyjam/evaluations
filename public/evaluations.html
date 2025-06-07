@@ -2,6 +2,8 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <title>Liste des évaluations</title>
   <style>
       :root {
@@ -60,7 +62,7 @@ body {
   margin-left: auto;
   position: absolute;
   top: 40px;
-  right: 15px;
+  right: 21px;
 }
 
 /* Optionnel : amélioration des <select> dans #bilans */
@@ -84,7 +86,7 @@ body {
   margin-left: auto;
   position: absolute;
   bottom: 70px;
-  right: 15px;
+  right: 21px;
 }
 .commentaireButton {
   background: #d6dade;
@@ -97,7 +99,7 @@ body {
 
 h1 {
   color: #222;
-  font-size: 28px;
+  font-size: 24px;
   margin-bottom: 20px;
 }
 
@@ -145,7 +147,7 @@ button,
   border-radius: 4px;
   padding: 10px 15px;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 20px;
   transition: background-color 0.3s ease;
   margin-top: 10px;
 }
@@ -176,6 +178,57 @@ select {
   cursor: pointer;
 }
 
+@media (max-width: 480px) {
+  body {
+    flex-direction: column;
+    align-items: stretch;
+    font-size: 14px;
+  }
+
+  #listeEvaluations {
+    min-width: 100%;
+    max-width: 100%;
+    margin-bottom: 20px;
+  }
+
+  #bilans,
+  #commentaires {
+    position: static; /* supprimer position absolute */
+    width: 100%;
+    margin: 0 0 20px 0;
+    box-shadow: none; /* optionnel, moins lourd sur mobile */
+    border-radius: 8px;
+  }
+
+  button.createButton {
+    width: 100%;
+    font-size: 18px;
+  }
+
+  #deconnexion {
+    display: none;
+  }
+
+  body {
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+  }
+
+  li {
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+  }
+
+  #bilans,
+  #commentaires {
+    padding-left: 7px !important;
+    padding-right: 7px !important;
+  }
+
+}
+
+
+
   </style>
 </head>
 <body>
@@ -186,7 +239,7 @@ select {
   <ul id="listeEvaluations"></ul>
 
   <hr />
-  <button onclick="window.location.href='evaluations/eval-setup.html';" class="createButton">Créer une nouvelle fiche d'éval</button>
+  <button onclick="window.location.href='eval-setup.html';" class="createButton">Créer une nouvelle fiche d'éval</button>
   <hr />
 
 
@@ -208,7 +261,7 @@ select {
       <option value="">👧 Sélectionner un.e élève</option>
     </select>
       
-    <p id="message">⚠️ S'assurer que les évaluations ont le statut <span style="color: green">"terminée"</span> pour n'oublier aucune compétence. Vous pourrez aussi en ajouter manuellement ci-après.</p>
+    <p id="message">⚠️ S'assurer que les évaluations ont le statut <span style="color: green">"terminée"</span> pour n'oublier aucune compétence.</p>
   </div>
 
   <div id="commentaires">
@@ -217,7 +270,7 @@ select {
   </div>
   
   
-<div style="position: absolute; top: 0.6rem; right: 1.6rem;">
+<div id="deconnexion" style="position: absolute; top: 0.6rem; right: 1.6rem;">
   <a href="/logout" style="text-decoration: none; font-size: 1rem; color: red;">❌ deconnexion</a>
 </div>
 
