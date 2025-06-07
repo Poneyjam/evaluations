@@ -7,6 +7,8 @@ const fs = require('fs');
 const rateLimit = require('express-rate-limit');
 
 const app = express();
+app.set('trust proxy', 1); // 1 = fait confiance à l'adresse IP du proxy de front (Render par ex.)
+
 const PORT = 3000;
 
 const PASSWORD_HASH = process.env.PASSWORD_HASH;
@@ -51,7 +53,7 @@ app.post('/login', loginLimiter, async (req, res) => {
 
 app.get('/admin', (req, res) => {
   if (req.session.isAdmin) {
-    res.sendFile(path.join(__dirname, 'evaluations', 'evaluations.html'));
+    res.sendFile(path.join(__dirname, 'public', 'evaluations.html'));
   } else {
     res.redirect('/login');
   }
@@ -71,8 +73,6 @@ app.get('/api/check-session', (req, res) => {
   }
 });
 
-// autoriser la visualisation de l'IP des ordinateurs
-app.set('trust proxy', false);
 
 
 
@@ -91,11 +91,11 @@ function getRequestInfo(req) {
 // EVALUATIONS --------------------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-app.use('/evaluations', express.static(path.join(__dirname, 'evaluations')));
+app.use('/evaluations', express.static(path.join(__dirname, 'public')));
 
 // Route pour obtenir la liste des éval et leur état ("en cours" ou "terminée")
 app.get('/liste-domaines', (req, res) => {
-    const dir = path.join(__dirname, 'evaluations');
+    const dir = path.join(__dirname, 'public');
     if (!fs.existsSync(dir)) return res.json([]);
   
     const fichiers = fs.readdirSync(dir).filter(file => file.endsWith('.json'));
@@ -129,7 +129,7 @@ app.get('/liste-domaines', (req, res) => {
 app.post('/update-etat/:domaine', (req, res) => {
     const { domaine } = req.params;
     const { etat } = req.body;
-    const filePath = path.join(__dirname, 'evaluations', `${domaine}.json`);
+    const filePath = path.join(__dirname, 'public', `${domaine}.json`);
     const { formattedDate, ip } = getRequestInfo(req);
   
     if (!fs.existsSync(filePath)) {
@@ -156,7 +156,7 @@ app.post('/update-etat/:domaine', (req, res) => {
     const { formattedDate, ip } = getRequestInfo(req);
 
     const nom = req.params.nom;
-    const fichier = path.join(__dirname, 'evaluations', `${nom}.json`);
+    const fichier = path.join(__dirname, 'public', `${nom}.json`);
   
     if (!fs.existsSync(fichier)) {
       return res.status(404).json({ message: "Fichier introuvable." });
@@ -172,6 +172,7 @@ app.post('/update-etat/:domaine', (req, res) => {
     }
   });
   
+
   
 // Route pour créer une page d'évaluation par domaine
 app.post('/setup-evaluation', (req, res) => {
@@ -192,7 +193,7 @@ app.post('/setup-evaluation', (req, res) => {
     }
 
     // Chemin du fichier à créer
-    const filePath = path.join(__dirname, 'evaluations', `${domaineNomComplet}.json`);
+    const filePath = path.join(__dirname, 'public', `${domaineNomComplet}.json`);
 
     const evaluationData = {
         annee,
@@ -212,7 +213,7 @@ app.post('/setup-evaluation', (req, res) => {
     };
 
     // Créer le dossier si nécessaire
-    const dirPath = path.join(__dirname, 'evaluations');
+    const dirPath = path.join(__dirname, 'public');
     if (!fs.existsSync(dirPath)) {
         fs.mkdirSync(dirPath);
     }
@@ -228,7 +229,7 @@ app.post('/setup-evaluation', (req, res) => {
 // Route pour afficher l'évaluation :
 app.get('/evaluation/:domaine', (req, res) => {
     const { domaine } = req.params;
-    const filePath = path.join(__dirname, 'evaluations', `${domaine}.json`);
+    const filePath = path.join(__dirname, 'public', `${domaine}.json`);
 
     if (!fs.existsSync(filePath)) {
         return res.status(404).json({ error: `Évaluation pour le domaine ${domaine} non trouvée.` });
@@ -242,7 +243,7 @@ app.get('/evaluation/:domaine', (req, res) => {
 app.post('/update-score/:domaine/:eleve/:competence', (req, res) => {
     const { domaine, eleve, competence } = req.params;
     const { valeur } = req.body;
-    const filePath = path.join(__dirname, 'evaluations', `${domaine}.json`);
+    const filePath = path.join(__dirname, 'public', `${domaine}.json`);
   
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Fichier non trouvé.' });
   
@@ -267,7 +268,7 @@ app.post('/update-score/:domaine/:eleve/:competence', (req, res) => {
 app.post('/update-commentaire/:domaine/:eleve', (req, res) => {
     const { domaine, eleve } = req.params;
     const { commentaire } = req.body;
-    const filePath = path.join(__dirname, 'evaluations', `${domaine}.json`);
+    const filePath = path.join(__dirname, 'public', `${domaine}.json`);
   
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Fichier non trouvé.' });
   
@@ -306,7 +307,7 @@ app.get('/competences', (req, res) => {
 
 // Route pour charger les élèves qui ont des compétences dans la liste déroulante
 app.get('/liste-eleves', (req, res) => {
-    const dir = path.join(__dirname, 'evaluations');
+    const dir = path.join(__dirname, 'public');
     const fichiers = fs.existsSync(dir)
       ? fs.readdirSync(dir).filter(f => f.endsWith('.json'))
       : [];
@@ -340,7 +341,7 @@ app.get('/liste-eleves', (req, res) => {
 app.get('/competences-eleve/:nom', (req, res) => {
     const { nom } = req.params;  // nom de l'élève
     const { annee, periode } = req.query;  // paramètres pour l'année et la période
-    const dir = path.join(__dirname, 'evaluations');
+    const dir = path.join(__dirname, 'public');
   
     if (!fs.existsSync(dir)) {
       return res.status(404).json({ competences: [] });
@@ -376,7 +377,7 @@ app.get('/competences-eleve/:nom', (req, res) => {
   // Route pour récupérer tous les commentaires d'un élève sur une année et une période
 app.get('/commentaires-eleve', (req, res) => {
     const { eleve, annee, periode } = req.query;
-    const dir = path.join(__dirname, 'evaluations');
+    const dir = path.join(__dirname, 'public');
 
     if (!fs.existsSync(dir)) return res.status(404).send("Aucun dossier d'évaluations.");
 
@@ -405,7 +406,7 @@ app.get('/commentaires-eleve', (req, res) => {
 app.get('/deja-valide/:eleve/:competence', (req, res) => {
     const { eleve, competence } = req.params;
     const periodeActuelle = req.query.periode;
-    const dir = path.join(__dirname, 'evaluations');
+    const dir = path.join(__dirname, 'public');
 
     const fichiers = fs.existsSync(dir)
         ? fs.readdirSync(dir).filter(f => f.endsWith('.json'))
@@ -436,7 +437,7 @@ app.post('/ajouter-eleve/:domaine', (req, res) => {
     const { domaine } = req.params;
     const { nom, prof } = req.body;
   
-    const filePath = path.join(__dirname, 'evaluations', `${domaine}.json`);
+    const filePath = path.join(__dirname, 'public', `${domaine}.json`);
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ message: "Fiche introuvable." });
     }
@@ -465,7 +466,7 @@ app.post('/ajouter-eleve/:domaine', (req, res) => {
 app.post('/supprimer-eleve/:domaine', (req, res) => {
   const { domaine } = req.params;
   const { nom } = req.body;
-  const filePath = path.join(__dirname, 'evaluations', `${domaine}.json`);
+  const filePath = path.join(__dirname, 'public', `${domaine}.json`);
 
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ message: "Fiche introuvable." });
@@ -490,7 +491,7 @@ app.post('/ajouter-competence/:domaine', (req, res) => {
     const { domaine } = req.params;
     const { competence } = req.body;
   
-    const filePath = path.join(__dirname, 'evaluations', `${domaine}.json`);
+    const filePath = path.join(__dirname, 'public', `${domaine}.json`);
   
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ message: "Fiche introuvable." });
@@ -529,7 +530,7 @@ app.post('/supprimer-competence/:domaine', (req, res) => {
     const { domaine } = req.params;
     const { competence } = req.body;  // La compétence à supprimer
 
-    const filePath = path.join(__dirname, 'evaluations', `${domaine}.json`);
+    const filePath = path.join(__dirname, 'public', `${domaine}.json`);
     if (!fs.existsSync(filePath)) {
         return res.status(404).json({ message: "Fiche introuvable." });
     }
