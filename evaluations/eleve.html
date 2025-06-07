@@ -1,0 +1,63 @@
+
+<style>
+  * {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    text-align: center;
+    padding: 2rem;
+  }
+</style>
+<!-- eleve.html -->
+<body>
+<div id="titre">Compétences de l’élève</div>
+<div id="resultat" class="codes">Chargement...</div>
+
+  <script>
+    let competences;
+
+  // Fonction pour obtenir les paramètres de l'URL
+  function getParam(name) {
+    const url = new URL(window.location.href);
+    return url.searchParams.get(name);
+  }
+
+  const nomEleve = getParam("eleve");  // Nom de l'élève
+  const annee = getParam("annee");     // Année
+  const periode = getParam("periode"); // Période
+
+  if (!nomEleve || !annee || !periode) {
+    document.getElementById("resultat").textContent = "Des paramètres manquent (élève, année ou période).";
+  } else {
+    document.getElementById("titre").innerHTML = `<h1>Compétences validées par <span style="color: #007BFF;">${nomEleve}</span></h1>`;
+
+    // Construction de l'URL pour appeler la route avec les paramètres
+    fetch(`/competences-eleve/${encodeURIComponent(nomEleve)}?annee=${encodeURIComponent(annee)}&periode=${encodeURIComponent(periode)}`)
+      .then(res => res.json())
+      .then(data => {
+        // Vérification si 'competences' existe et est un tableau
+        if (data && Array.isArray(data.competences)) {
+          const competences = data.competences;
+
+          if (competences.length === 0) {
+            document.getElementById("resultat").textContent = "❌ Aucune compétence trouvée.";
+            setTimeout(()=>{window.location.href = "evaluations.html";}, 2000);
+          } else {
+            document.getElementById("resultat").textContent = competences.join(", ");
+            window.location.href = `programmeDeBrevetIndividuel/programme-brevets.html?eleve=${nomEleve}&competences=${competences}&annee=${annee}&periode=${periode}`;
+          }
+        } else {
+          document.getElementById("resultat").textContent = "❌ Aucune donnée de compétences disponible.";
+          setTimeout(()=>{window.location.href = "evaluations.html";}, 2000);
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        document.getElementById("resultat").textContent = "Erreur lors du chargement des compétences.";
+      });
+
+  }
+</script>
+
+    
+
+</body>
+</html>

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Commentaires Élève</title>
+  <style>
+    @font-face {
+        font-family: 'Comic';
+        src: url(../polices/ComicSansMS.ttf) format('truetype');
+    }
+    * {
+        font-size: 16px;
+        font-family: "Comic";
+        text-align: justify;
+    }
+    body {
+      padding: 2em;
+      margin: 0;
+      height: 100vh; /* Prendre toute la hauteur de la page */
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+    }
+
+    h1 {
+      margin-bottom: 1em;
+    }
+
+    /* Style pour les sélecteurs */
+    select {
+      margin: 0.5em;
+      padding: 0.3em;
+      font-size: 1em;
+    }
+
+    /* Conteneur pour le textarea et le bouton */
+    .textarea-container {
+      position: relative;
+      width: 90%; /* Le conteneur prend 90% de la largeur de la page */
+      max-width: 1200px; /* Limite la largeur du conteneur */
+      height: 90%; /* Permet au textarea de prendre toute la hauteur disponible */
+    }
+
+    /* Style pour le textarea */
+    textarea {
+      width: 100%;
+      height: 60vh; /* Le textarea occupe 70% de la hauteur de la fenêtre */
+      font-size: 1em;
+      white-space: pre-wrap;
+      padding-right: 50px; /* Espace pour le bouton */
+      resize: none; /* Empêche le redimensionnement du textarea */
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 1em;
+      box-sizing: border-box;
+    }
+
+    /* Style pour le bouton de copie */
+    button {
+      position: absolute;
+      top: 10px; /* Décale un peu le bouton du haut */
+      right: 10px; /* Décale un peu le bouton du bord droit */
+      background-color: #b0c8b1;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 18px;
+      cursor: pointer;
+      border-radius: 5px;
+      z-index: 1; /* S'assurer que le bouton reste au-dessus du textarea */
+    }
+
+    /* Effet hover pour le bouton */
+    button:hover {
+      background-color: #45a049;
+    }
+
+    /* État de l'emoji lorsque le texte est copié */
+    .copied {
+      background-color: #28a745; /* Vert quand c'est copié */
+      color: white;
+      border-radius: 5px;
+    }
+    /* Style pour les boutons Retour, Imprimer */
+    .navJournalButton {
+        max-width: 10%; padding: 5px;
+    }
+    .backButton {
+        position: absolute;
+        top: 1%;
+        left: 1%;
+        font-family: "Comic";
+        width: 9%;
+        height: 40px;
+        background-color: lightgray; /* Couleur grey */
+        color: white; /* Couleur du texte */
+        border: none; /* Pas de bordure */
+        border-radius: 4px; /* Coins arrondis */
+        padding: 10px 15px; /* Espace intérieur */
+        cursor: pointer; /* Curseur en main */
+        font-size: 16px; /* Taille de police */
+        text-align: center;
+    }
+    .backButton:hover {
+        background-color: grey; /* Couleur grey */
+    }
+
+    #message {
+       position: absolute;
+       left: 10%;
+       bottom: 3%;
+       color: rgb(147, 147, 99);
+    }
+
+  </style>
+</head>
+<body>
+    <button id="backBtn" class="backButton" onclick="window.location.href='evaluations.html';"><img src="../svgs/solid/arrows-split-up-and-left.svg" class="navJournalButton"/> Retour</button>
+
+  <h1>🗒️ Commentaires Élève</h1>
+
+  <!-- Sélecteurs -->
+  <div id="filtres">
+    <select id="selectAnnee">
+      <option value="">📅 Sélectionner une année</option>
+    </select>
+
+    <select id="selectPeriode" style="display:none;">
+      <option value="">🕓 Sélectionner une période</option>
+    </select>
+
+    <select id="selectProf" style="display:none;">
+      <option value="">👩‍🏫 Sélectionner un prof</option>
+    </select>
+
+    <select id="selectEleve" style="display:none;" onchange="chargerCommentaires()">
+      <option value="">👧 Sélectionner un.e élève</option>
+    </select>
+  </div>
+
+  <!-- Zone commentaire -->
+  <div class="textarea-container">
+    <!-- Textarea pour afficher les commentaires -->
+    <textarea id="commentaires" placeholder="Sélectionnez un élève pour voir ses commentaires..." rows="10" cols="100%"></textarea>
+
+    <!-- Bouton pour copier les commentaires -->
+    <button id="copierButton" onclick="copierTexte()">📋 Copier</button>
+  </div>
+
+  <p id="message">⚠️ Cette page permet de rassembler tous les commentaires. C'est une base pour la rédaction mais les modifications apportées ici ne seront pas enregistrées.</p>
+  <script>
+    // Fonction pour copier le texte du textarea dans le presse-papiers
+    function copierTexte() {
+      // Récupère le textarea
+      const textarea = document.getElementById("commentaires");
+      const copierButton = document.getElementById("copierButton");
+
+      // Sélectionner le texte
+      textarea.select();
+      textarea.setSelectionRange(0, 99999); // Pour mobile
+
+      // Copier le texte
+      document.execCommand("copy");
+
+      // Changer l'emoji et l'état du bouton pour montrer que le texte a été copié
+      copierButton.innerHTML = "✅ Copié";  // Emoji de succès
+      copierButton.classList.add("copied");
+
+      // Réinitialiser l'emoji après 2 secondes pour laisser le temps de voir l'alerte
+      setTimeout(() => {
+        copierButton.innerHTML = "📋 Copier";  // Réinitialisation de l'emoji
+        copierButton.classList.remove("copied");
+      }, 2000);
+    }
+
+
+
+    let evaluations = [];
+  
+    async function chargerEvaluations() {
+      const res = await fetch("/liste-domaines");
+      if (!res.ok) return;
+      evaluations = await res.json();
+  
+      const selectAnnee = document.getElementById("selectAnnee");
+      const annees = [...new Set(evaluations.map(e => e.annee))].sort();
+      annees.forEach(annee => {
+        const opt = document.createElement("option");
+        opt.value = annee;
+        opt.textContent = annee;
+        selectAnnee.appendChild(opt);
+      });
+  
+      // Pré-sélection si paramètres URL présents
+      const urlParams = new URLSearchParams(window.location.search);
+      const anneeURL = urlParams.get("annee");
+      const periodeURL = urlParams.get("periode");
+      const profURL = urlParams.get("prof");
+      const eleveURL = urlParams.get("eleve");
+  
+      if (anneeURL) selectAnnee.value = anneeURL;
+      if (anneeURL) handleAnneeChange(anneeURL, periodeURL, profURL, eleveURL);
+    }
+  
+    async function handleAnneeChange(annee, periodePreselect, profPreselect, elevePreselect) {
+      const selectPeriode = document.getElementById("selectPeriode");
+      const periodes = [...new Set(evaluations.filter(e => e.annee === annee).map(e => e.periode))].sort();
+  
+      selectPeriode.innerHTML = '<option value="">🕓 Sélectionner une période</option>';
+      selectPeriode.style.display = "inline-block";
+      periodes.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p;
+        opt.textContent = p;
+        selectPeriode.appendChild(opt);
+      });
+  
+      if (periodePreselect) {
+        selectPeriode.value = periodePreselect;
+        handlePeriodeChange(annee, periodePreselect, profPreselect, elevePreselect);
+      }
+  
+      selectPeriode.onchange = () => handlePeriodeChange(annee, selectPeriode.value);
+    }
+  
+    async function handlePeriodeChange(annee, periode, profPreselect, elevePreselect) {
+      const profs = [...new Set(
+        evaluations.filter(e => e.annee === annee && e.periode === periode)
+          .flatMap(e => e.eleves.map(el => el.prof))
+      )].sort();
+  
+      const selectProf = document.getElementById("selectProf");
+      selectProf.innerHTML = '<option value="">👩‍🏫 Sélectionner un.e prof</option>';
+      selectProf.style.display = "inline-block";
+  
+      profs.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p;
+        opt.textContent = p;
+        selectProf.appendChild(opt);
+      });
+  
+      if (profPreselect) {
+        selectProf.value = profPreselect;
+        handleProfChange(annee, periode, profPreselect, elevePreselect);
+      }
+  
+      selectProf.onchange = () => handleProfChange(annee, periode, selectProf.value);
+    }
+  
+    async function handleProfChange(annee, periode, prof, elevePreselect) {
+      const elevesSet = new Set();
+      evaluations
+        .filter(e => e.annee === annee && e.periode === periode)
+        .forEach(e => {
+          e.eleves.filter(el => el.prof === prof).forEach(el => elevesSet.add(el.nom));
+        });
+  
+      const selectEleve = document.getElementById("selectEleve");
+      selectEleve.innerHTML = '<option value="">👧 Sélectionner un.e élève</option>';
+      selectEleve.style.display = "inline-block";
+  
+      [...elevesSet].sort().forEach(nom => {
+        const opt = document.createElement("option");
+        opt.value = nom;
+        opt.textContent = nom;
+        selectEleve.appendChild(opt);
+      });
+  
+      if (elevePreselect) {
+        selectEleve.value = elevePreselect;
+        chargerCommentaires();
+      }
+  
+      selectEleve.onchange = chargerCommentaires;
+    }
+  
+    async function chargerCommentaires() {
+      const eleve = document.getElementById("selectEleve").value;
+      const annee = document.getElementById("selectAnnee").value;
+      const periode = document.getElementById("selectPeriode").value;
+      const prof = document.getElementById("selectProf").value;
+  
+      // Mise à jour de l'URL
+      const params = new URLSearchParams({ eleve, annee, periode, prof });
+      window.history.replaceState({}, "", `?${params.toString()}`);
+  
+      const textarea = document.getElementById("commentaires");
+      textarea.value = "Chargement...";
+  
+      try {
+        const res = await fetch(`/commentaires-eleve?eleve=${encodeURIComponent(eleve)}&annee=${annee}&periode=${periode}`);
+        if (!res.ok) throw new Error("Aucun commentaire trouvé.");
+        let texte = await res.text();
+  
+        // Nettoyage des ** ... ** (commentaires d'étiquettes)
+        texte = texte.replace(/\*\*[^*]+\*\*/g, "").replace(/\n{3,}/g, "\n\n").trim();
+  
+        textarea.value = texte;
+      } catch (err) {
+        textarea.value = err.message;
+      }
+    }
+  
+    // Init
+    document.getElementById("selectAnnee").onchange = function () {
+      const annee = this.value;
+      handleAnneeChange(annee);
+    };
+  
+    chargerEvaluations();
+
+
+// Fonction pour copier le texte du textarea dans le presse-papiers
+function copierTexte() {
+  // Récupère le textarea
+  const textarea = document.getElementById("commentaires");
+  const copierButton = document.getElementById("copierButton");
+
+  // Sélectionner le texte
+  textarea.select();
+  textarea.setSelectionRange(0, 99999); // Pour mobile
+  
+  // Copier le texte
+  document.execCommand("copy");
+  
+  // Changer l'emoji et l'état du bouton pour montrer que le texte a été copié
+  copierButton.innerHTML = "✅ Copié";  // Emoji de succès
+  copierButton.classList.add("copied");
+
+  // Réinitialiser l'emoji après 2 secondes pour laisser le temps de voir l'alerte
+  setTimeout(() => {
+    copierButton.innerHTML = "📋 Copier";  // Réinitialisation de l'emoji
+    copierButton.classList.remove("copied");
+  }, 2000);
+}
+
+
+  </script>
+  
+</body>
+</html>

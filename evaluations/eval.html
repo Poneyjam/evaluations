@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Évaluation – Édition</title>
+
+  <style>
+      :root {
+      --green: #4CAF50; /* Un vert vif */
+      --lightGreen: #81C784; /* Un vert clair et frais */
+      --lightChocolate: #d16524;
+      --background-color: white;
+      --pink: #eb7880;
+      --white: #fcffff;
+      --purple: #caa7d6;
+      --blue: #18709f;
+      --lightBlue: #4adde7;
+      --rouge: #F44336; /* Un rouge vif */
+      --border-radius: 10px;
+      --transition-speed: 0.35s;
+      }
+      @font-face {
+      font-family: 'ComicSansMS';
+      src: url('../polices/ComicSansMS.woff2') format('woff2'),
+            url('../polices/ComicSansMS.ttf') format('truetype');
+      }
+
+      * {
+      box-sizing: border-box;
+      border-radius: 10px;
+      font-family: 'ComicSansMS', sans-serif;
+      
+      }
+      body {
+        user-select: none;
+      }
+    h1 { color: #333; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td {
+      border: 2px solid #939393;
+      padding: 1px;
+      text-align: center;
+      font-size: small;
+  
+    }
+    th {
+      background-color: #f4f4f4;
+    }
+    th[title] {
+        cursor: help;
+    }
+    td:hover {
+      cursor: pointer;
+      background-color: #f0f8ff;
+    }
+    #competencesSollicitees{
+        margin-top: 10px;
+        padding-top: 20px;
+    }
+/* Style pour la boîte de dialogue */
+ #dialog {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    border: 1px solid #ccc;
+    border-radius: 22px;
+    padding: 20px;
+    background-color: white;
+    z-index: 1000;
+    width: 210px;
+}
+#overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.99);
+    z-index: 999;
+}
+#passwordInput{
+    width: 90%;
+}
+#confirmButton {
+    background: var(--green);
+    width: 150px;
+
+}
+#cancelButton {
+    background: var(--rouge);
+    width: 150px;
+
+}
+/* Style pour les boutons Retour, Imprimer */
+.navJournalButton {
+    max-width: 24%; padding: 7px;
+}
+.backButton {
+    width: 10%;
+    height: 50px;
+    background-color: lightgray; /* Couleur grey */
+    color: white; /* Couleur du texte */
+    border: none; /* Pas de bordure */
+    border-radius: 4px; /* Coins arrondis */
+    padding: 10px 15px; /* Espace intérieur */
+    cursor: pointer; /* Curseur en main */
+    font-size: 16px; /* Taille de police */
+    margin: 20px auto; /* Marge automatique pour centrer */
+    text-align: center;
+}
+.backButton:hover {
+    background-color: grey; /* Couleur grey */
+}
+.printButton {
+    width: 10%;
+    height: 50px;
+    background-color: var(--purple); 
+    color: white; /* Couleur du texte */
+    border: none; /* Pas de bordure */
+    border-radius: 4px; /* Coins arrondis */
+    padding: 10px 15px; /* Espace intérieur */
+    cursor: pointer; /* Curseur en main */
+    font-size: 16px; /* Taille de police */
+    margin: 20px auto; /* Marge automatique pour centrer */
+    text-align: center;
+    
+}
+.printButton:hover {
+    background-color: purple; 
+}
+/* Cible la colonne commentaire dans le tableau */
+td[data-comp="commentaire"],
+th:has(> span.commentaire-header) {
+  width: 40%;
+  text-align: left;
+  padding: 4px;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+/* Réduire les autres colonnes à un minimum utile */
+td:not([data-comp="commentaire"]),
+th:not(:has(> span.commentaire-header)) {
+  width: 1%;
+  font-size: x-small;
+  padding: 2px;
+}
+
+/* Éviter que l'impression élargisse tout */
+@media print {
+  .grise-a-imprimer {
+      background-color: #e0e0e0 !important;
+      border-radius: 0px;
+      -webkit-print-color-adjust: exact; /* Pour forcer la couleur sur certains navigateurs */
+      print-color-adjust: exact;
+    }
+
+  td, th {
+    font-size: 10pt;
+  }
+
+  td[data-comp="commentaire"] {
+    width: 40%;
+  }
+  .noPrint {
+        display: none;
+  }
+}
+.etatButton {
+  position: fixed;
+  top: 4%;
+  right: 3%;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  font-weight: bold;
+}
+
+.etatButton[style*="green"] {
+  background-color: green;
+}
+
+.etatButton[style*="orange"] {
+  background-color: orange;
+}
+
+  </style>
+</head>
+<body>
+    <div id="overlay" style="display: none;"></div>
+    <div id="dialog"  style="display: none;">
+        <label for="passwordInput">Mot de passe adulte :</label>
+        <input type="password" id="passwordInput"/>
+        <button id="confirmButton">Valider</button>
+        <button id="cancelButton">Annuler</button>
+    </div>
+
+
+  <h1 id="evalTitle">Édition des évaluations</h1>
+  <label for="domaine" class="noPrint">Choisir un domaine :</label>
+  <select id="domaineSelect" class="noPrint"></select>
+
+  <table id="evalTable">
+    <thead></thead>
+    <tbody></tbody>
+  </table>
+
+  <br>
+  <button id="backBtn" class="noPrint" style="border: 2px solid #999;" onclick="window.location.href='./evaluations.html';">🔙 Retour</button>
+  <button id="printBtn" class="noPrint" style="border: 2px solid #1e90ff;" onclick="imprimer()">🖨️ Imprimer</button>
+  <button id="ajouterEleveBtn" class="noPrint" style="border: 2px solid #28a745;">➕ Ajouter un nouvel élève</button>
+  <button id="supprimerEleveBtn" class="noPrint" style="border: 2px solid #dc3545;">🗑️ Supprimer un élève</button>
+  <button id="ajouterCompetenceBtn" class="noPrint" style="border: 2px solid #ffc107;">➕ Ajouter une compétence</button>
+  <button id="supprimerCompetenceBtn" class="noPrint" style="border: 2px solid #fd7e14;">🗑️ Supprimer une compétence</button>
+  
+
+  <button id="exportCSVBtn" class="noPrint" style="border: 2px solid #6f42c1; display: none;">📤 Exporter en CSV</button>
+  <button id="telechargerJsonBtn" class="noPrint" style="border: 2px solid #6f42c1; display: none;">💻 Exporter en .json</button>
+
+
+
+
+  <button id="changeEtat" class="etatButton noPrint" onclick="changerEtat()"></button>
+  <div id="competencesSollicitees"></div>
+
+  <script>
+    // Verifier si l'utilisateur est un adulte -----------------------------------------------
+    // Pour récupérer la variable admin
+    let isAdmin = JSON.parse(localStorage.getItem('admin'));
+
+    // Fonction pour afficher la boîte de dialogue de mot de passe
+    function showPasswordDialog() {
+        document.getElementById('overlay').style.display = 'block';
+        document.getElementById('dialog').style.display = 'block';
+
+        const passwordInput = document.getElementById('passwordInput');
+        passwordInput.focus();
+
+        // Écouteur d'événements pour la touche ENTER
+        passwordInput.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                const password = passwordInput.value;
+                if (password === "1968" || password === "dirvaulx") {
+                    closeDialog();
+                } else {
+                    alert("Code adulte requis");
+                }
+            }
+        });
+
+        document.getElementById('confirmButton').onclick = function() {
+            const password = passwordInput.value;
+            if (password === "1968" || password === "dirvaulx") {
+                closeDialog();
+            } else {
+                window.top.location.href = "../index.html";
+            }
+        };
+
+        document.getElementById('cancelButton').onclick = function() {
+            window.top.location.href = "../index.html";
+        };
+    }
+
+    function closeDialog() {
+        document.getElementById('overlay').style.display = 'none';
+        document.getElementById('dialog').style.display = 'none';
+        document.getElementById('passwordInput').value = ''; // Réinitialiser le champ de saisie
+    }
+    // Vérifie si l'utilisateur est admin
+    if (isAdmin) {
+        // tout est ok : ne rien faire
+    } else {
+        showPasswordDialog();
+    }
+    // ---------------------------------------------------------------------------------------
+    
+    // variables globales pour personnaliser l'impression de la page
+    let domaineActuel = "";
+    let periodeActuelle = "";
+    let nomDuGroupe = "";
+
+    let competencesUtilisees;
+    
+    
+    // Lire domaine depuis l'URL
+    const params = new URLSearchParams(window.location.search);
+    const domaineParam = params.get("domaine");
+    if (domaineParam) {
+        //chargerEvaluation(domaineParam);
+    }
+
+    // Charger les données du domaine sélectionné
+    async function chargerEvaluation(domaine) {
+      const response = await fetch(`/evaluations/${domaine}.json`);
+      if (!response.ok) {
+        alert("Erreur lors du chargement des données.");
+        return;
+      }
+
+      const data = await response.json();
+
+        // Mémoriser domaine et période globalement
+        domaineActuel = data.domaine;
+
+        // Mettre à jour le titre dynamiquement
+        document.getElementById('evalTitle').innerText = `${domaineActuel}`;
+
+      const table = document.getElementById('evalTable');
+      const thead = table.querySelector('thead');
+      const tbody = table.querySelector('tbody');
+      thead.innerHTML = '';
+      tbody.innerHTML = '';
+
+      const competences = data.competences;
+      const descriptions = await chargerCompetencesGlobales(competences);
+      
+
+      const scores = data.scores;
+      const eleves = data.eleves;
+
+      // En-tête
+      let headRow = '<tr><th>Élève</th><th>Prof</th>';
+
+        for (const comp of competences) {
+            if (comp === "commentaire") {
+                headRow += `<th><span class="commentaire-header">${comp}</span></th>`;
+            } else {
+                const desc = descriptions[comp] || "";
+                headRow += `<th title="${desc}">${comp}</th>`;
+            }
+        }
+        headRow += '</tr>';
+        thead.innerHTML = headRow;
+
+
+
+      // Corps du tableau
+      for (const eleveObj of eleves) {
+        const nom = eleveObj.nom;
+        const prof = eleveObj.prof;
+        const ligne = document.createElement('tr');
+
+        ligne.innerHTML = `<td>${nom}</td><td>${prof}</td>`;
+        for (const comp of competences) {
+          const td = document.createElement('td');
+          let val = scores[nom]?.[comp] ?? '';
+          // Si pas encore renseigné, aller vérifier les périodes précédentes
+          if (!val && comp !== "commentaire") {
+            try {
+              const res = await fetch(`/deja-valide/${encodeURIComponent(nom)}/${encodeURIComponent(comp)}?periode=${encodeURIComponent(data.periode)}`);
+              const { deja } = await res.json();
+              if (deja) {
+                val = "déjà";
+              }
+            } catch (err) {
+              console.error("Erreur lors de la vérification déjà validée ou non :", err);
+            }
+          }
+
+          td.textContent = val;
+          td.dataset.eleve = nom;
+          td.dataset.comp = comp;
+
+          // Ajout du comportement clic
+          td.addEventListener('click', function () {
+            const eleve = this.dataset.eleve;
+            const comp = this.dataset.comp;
+            const actuel = this.textContent.trim();
+
+            if (comp === 'commentaire') {
+              const baseCommentaire = actuel.split("**Compétences validées")[0]?.trim() || "";
+              const nouveau = prompt("Entrer un commentaire :", baseCommentaire);
+              if (nouveau === null) return;
+
+              fetch(`/update-commentaire/${domaine}/${eleve}`, {
+                method: "POST",
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ commentaire: nouveau })
+              })
+              .then(res => res.json())
+              .then(data => {
+                this.textContent = data.commentaire;
+              });
+
+            } else {
+              const prochaineValeur = cycleValeur(actuel);
+              fetch(`/update-score/${domaine}/${eleve}/${comp}`, {
+                method: "POST",
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ valeur: prochaineValeur })
+              })
+              .then(() => {
+                this.textContent = prochaineValeur;
+              })
+              .then(() => {
+                this.textContent = prochaineValeur;
+
+                // Mettre à jour dynamiquement le commentaire
+                fetch(`/evaluation/${domaine}`)
+                    .then(res => res.json())
+                    .then(data => {
+                    const commentaire = data.scores[eleve]["commentaire"] || "";
+                    const ligne = this.parentElement;
+                    const cellules = ligne.querySelectorAll("td");
+                    const indexCommentaire = [...cellules].findIndex(td => td.dataset.comp === "commentaire");
+                    if (indexCommentaire !== -1) {
+                        cellules[indexCommentaire].textContent = commentaire;
+                    }
+                    });
+                });
+            }
+          });
+
+          ligne.appendChild(td);
+        }
+
+        tbody.appendChild(ligne);
+      }
+    }
+
+    function cycleValeur(val) {
+      if (!val || val === "") return "oui";
+      if (val === "oui") return "non";
+      if (val === "non") return "déjà";
+      if (val === "déjà") return "";
+    }
+
+// COMPETENCES NOMINATIVES : lecture du fichier competences.json
+async function chargerCompetencesGlobales(competencesUtilisees) {
+    const res = await fetch('/competences.json');
+    if (!res.ok) {
+        console.error("Erreur lors du chargement de competences.json");
+        return {};
+    }
+
+    const data = await res.json();
+    const competencesDictionnaire = data.competences;
+
+    const listeDescriptions = competencesUtilisees
+        .map(cle => {
+            const desc = competencesDictionnaire[cle];
+            return desc ? `<li>${cle} : ${desc}</li>` : null;
+        })
+        .filter(Boolean);
+
+    const compDiv = document.getElementById('competencesSollicitees');
+    compDiv.innerHTML = "<strong>Compétences sollicitées :</strong><ul>" +
+        listeDescriptions.join('') +
+        "</ul>";
+
+    return competencesDictionnaire;
+}
+
+
+
+// Charger les domaines disponibles dans le sélecteur
+async function chargerDomaines() {
+  const select = document.getElementById('domaineSelect');
+  const res = await fetch('/liste-domaines');
+
+  if (!res.ok) {
+    alert("Erreur lors du chargement des domaines.");
+    return;
+  }
+
+  const domaines = await res.json();
+  
+  // Vider le select avant d'ajouter les nouvelles options
+  select.innerHTML = '';
+
+  // Ajouter une option vide par défaut
+  const optionDefaut = document.createElement('option');
+  optionDefaut.value = '';
+  optionDefaut.textContent = 'Sélectionner un domaine';
+  select.appendChild(optionDefaut);
+
+  // Ajouter les domaines au select
+  for (const domaineObj of domaines) {
+    const option = document.createElement('option');
+    option.value = domaineObj.domaine; // Utilise la propriété 'domaine'
+    option.textContent = domaineObj.domaine; // Utilise la propriété 'domaine' pour afficher
+    select.appendChild(option);
+  }
+
+  // Si l'URL a déjà un domaine, on sélectionne l'option sans recharger
+  const domaineParam = new URLSearchParams(window.location.search).get("domaine");
+  if (domaineParam) {
+    select.value = domaineParam;
+    chargerEvaluation(domaineParam); // Charge les données pour le domaine
+    chargerEtat(domaineParam); // Met à jour l'état du bouton
+  } else if (domaines.length > 0) {
+    select.value = domaines[0].domaine; // Sélectionne le premier domaine par défaut
+    chargerEvaluation(domaines[0].domaine); // Charge les données pour le premier domaine
+    chargerEtat(domaines[0].domaine); // Met à jour l'état du bouton
+  }
+  select.addEventListener('change', () => {
+    const selectedDomaine = select.value;
+    chargerEvaluation(selectedDomaine);
+    chargerEtat(selectedDomaine); // ✅ ICI le paramètre est bien transmis
+  });
+
+}
+
+chargerDomaines();
+
+async function chargerEtat(domaine) {
+  const bouton = document.getElementById('changeEtat');
+  if (!domaine || !bouton) return;
+
+  const res = await fetch(`/evaluation/${encodeURIComponent(domaine)}`);
+  if (!res.ok) {
+    bouton.textContent = "Erreur";
+    bouton.style.backgroundColor = "gray";
+    return;
+  }
+
+  const data = await res.json();
+  const etat = data.etat || "en cours";
+
+  bouton.textContent = etat;
+  bouton.style.backgroundColor = etat === 'terminée' ? 'green' : 'orange';
+}
+
+
+
+// Changer l'état de "en cours" à "terminée"
+async function changerEtat() {
+  const params = new URLSearchParams(window.location.search);
+  const domaine = params.get('domaine');
+  if (!domaine) return alert("Domaine introuvable.");
+
+  const bouton = document.getElementById('changeEtat');
+  const nouvelEtat = bouton.textContent.trim() === 'en cours' ? 'terminée' : 'en cours';
+
+  try {
+    const res = await fetch(`/update-etat/${encodeURIComponent(domaine)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ etat: nouvelEtat })
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      bouton.textContent = nouvelEtat;
+      bouton.style.backgroundColor = nouvelEtat === 'terminée' ? 'green' : 'orange';
+        if (nouvelEtat === 'terminée'){
+          telechargerJSONFiche(domaine);
+        }
+    } else {
+      console.error("Réponse serveur invalide :", data);
+      alert("Erreur lors de la mise à jour de l'état.");
+    }
+  } catch (err) {
+    console.error("Erreur JS/fetch :", err);
+    alert("Erreur réseau ou interne.");
+  }
+}
+
+
+
+
+
+
+
+  
+function griserLesCasesDejaValidees() {
+    const cellules = document.querySelectorAll('#evalTable td'); // Sélectionne toutes les cellules du tableau
+
+    cellules.forEach(td => {
+        // Si le contenu de la cellule est "déjà"
+        if (td.textContent.trim() === "déjà") {
+            td.innerText = "oui"; // Remplacer "déjà" par "oui"
+            td.style.backgroundColor = "#ccc"; // Colorier la cellule en gris
+            td.style.borderRadius = "0px"; // Enlever les coins arrondis
+            td.classList.add('grise-a-imprimer'); // Ajouter une classe CSS pour imprimer
+        }
+
+        // Remplacer ** L23, E10... ** par du texte en gras
+        td.innerHTML = td.innerHTML.replace(/\*\*(.*?)\*\*/g, '<br><strong>$1</strong>'); // Utiliser des expressions régulières pour trouver le texte entouré de ** et le mettre en <strong>
+    });
+}
+
+document.getElementById("ajouterEleveBtn").addEventListener("click", async () => {
+  let nom = prompt("Prénom de l'élève à ajouter :");
+  if (!nom) return;
+  nom = nom.charAt(0).toUpperCase() + nom.slice(1).toLowerCase();
+
+  let prof = prompt("Prénom du prof associé :");
+  if (!prof) return;
+  prof = prof.charAt(0).toUpperCase() + prof.slice(1).toLowerCase();
+
+  const domaine = domaineActuel; // utilise la variable globale déjà définie
+
+  try {
+    const res = await fetch(`/ajouter-eleve/${encodeURIComponent(domaine)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nom, prof })
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      alert(`✅ ${data.message}`);
+      chargerEvaluation(domaine); // Recharge l'affichage avec le nouvel élève
+    } else {
+      alert(`❌ ${data.message}`);
+    }
+  } catch (err) {
+    console.error("Erreur lors de l'ajout :", err);
+    alert("Erreur réseau.");
+  }
+});
+
+document.getElementById("supprimerEleveBtn").addEventListener("click", async () => {
+  const nom = prompt("Quel élève souhaitez-vous supprimer ? (Prénom exact)");
+  if (!nom) return;
+
+  const domaine = domaineActuel;
+
+  const confirmation = confirm(`❗ Cette action est irréversible. Supprimer ${nom} du domaine "${domaine}" ?`);
+  if (!confirmation) return;
+
+  try {
+    const res = await fetch(`/supprimer-eleve/${encodeURIComponent(domaine)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nom })
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      alert(`✅ ${data.message}`);
+      chargerEvaluation(domaine);
+    } else {
+      alert(`❌ ${data.message}`);
+    }
+  } catch (err) {
+    console.error("Erreur lors de la suppression :", err);
+    alert("Erreur réseau.");
+  }
+});
+
+document.getElementById('ajouterCompetenceBtn').addEventListener('click', async function() {
+    const rawInput = prompt('Veuillez entrer le code de la compétence à ajouter (ex : N199, CAL10) :');
+
+    if (!rawInput) return;
+
+    const competence = rawInput.trim().toUpperCase();
+
+    // Vérifie le format : lettres majuscules suivies de chiffres, sans espace
+    const regex = /^[A-Z]+[0-9]+$/;
+    if (!regex.test(competence)) {
+        alert("❌ Format invalide. Utilisez uniquement des lettres majuscules suivies de chiffres (ex: N199, CAL10).");
+        return;
+    }
+
+    const domaine = domaineActuel;
+
+    try {
+        const res = await fetch(`/ajouter-competence/${encodeURIComponent(domaine)}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ competence })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            alert(`✅ ${data.message}`);
+            chargerEvaluation(domaine);
+        } else {
+            alert(`❌ ${data.message}`);
+        }
+    } catch (err) {
+        console.error('Erreur:', err);
+        alert("❌ Erreur réseau lors de l'ajout de la compétence.");
+    }
+});
+
+document.getElementById('supprimerCompetenceBtn').addEventListener('click', async function() {
+    // Afficher un prompt pour que l'utilisateur entre le nom de la compétence à supprimer
+    const competence = prompt('Veuillez entrer le nom de la compétence à supprimer :');
+
+    // Vérifier si la compétence est vide
+    if (!competence || competence.trim() === '') {
+        alert('Le nom de la compétence ne peut pas être vide.');
+        return;
+    }
+
+    const domaine = domaineActuel;  // Utilise la variable globale `domaineActuel` comme pour les élèves
+
+    const confirmation = confirm(`❗ Cette action est irréversible. Voulez-vous supprimer la compétence "${competence}" du domaine "${domaine}" ?`);
+    if (!confirmation) return;
+
+    try {
+        const res = await fetch(`/supprimer-competence/${encodeURIComponent(domaine)}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ competence: competence })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            alert(`✅ ${data.message}`);
+            chargerEvaluation(domaine); // Recharger l'évaluation avec la compétence supprimée
+        } else {
+            alert(`❌ ${data.message}`);
+        }
+    } catch (err) {
+        console.error('Erreur:', err);
+        alert('Une erreur est survenue lors de la suppression de la compétence.');
+    }
+});
+
+
+// ------------------------------------------ mettre en tableau CSV ----------------------------------------------
+document.getElementById('exportCSVBtn').addEventListener('click', function () {
+  const table = document.getElementById('evalTable');
+  const rows = Array.from(table.querySelectorAll('tr'));
+  
+  // Générer le contenu CSV
+  const csv = rows.map(row => {
+    const cells = Array.from(row.querySelectorAll('th, td'));
+    return cells.map(cell => `"${cell.textContent.trim()}"`).join(',');
+  }).join('\n');
+
+  // Ajouter BOM pour UTF-8
+  const BOM = '\uFEFF';
+  const csvWithBOM = BOM + csv;
+
+  // Créer un Blob avec encodage UTF-8
+  const blob = new Blob([csvWithBOM], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+
+  // Créer un lien de téléchargement
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `evaluation_${domaineActuel.replace(/\s+/g, '_')}.csv`; // Nom du fichier basé sur le domaine
+  document.body.appendChild(a);
+  a.click(); // Lancer le téléchargement
+  document.body.removeChild(a); // Supprimer le lien une fois le téléchargement lancé
+  griserLesCasesDejaValidees();
+});
+
+// ------------------------------------------ télécharger le fichier .JSON-------------------------------------
+async function telechargerJSONFiche(domaine) {
+  alert('Un fichier de sauvegarde va être téléchargé, par précaution.');
+  try {
+    const res = await fetch(`/evaluations/${encodeURIComponent(domaine)}.json`);
+    if (!res.ok) throw new Error("Erreur de récupération du fichier");
+
+    const data = await res.json();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${domaine}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error("Erreur lors du téléchargement :", err);
+    alert("Impossible de sauvegarder le fichier.");
+  }
+}
+
+
+// ------------------------------------------ PRINT ----------------------------------------------
+function imprimer() {
+    // Lancer l'impression
+    window.print();
+}
+
+window.addEventListener("beforeprint", (evenement) => {
+  griserLesCasesDejaValidees();
+});
+
+
+
+
+
+
+
+  </script>
+</body>
+</html>

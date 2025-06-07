@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Créer une évaluation</title>
+  <style>
+    :root {
+      --green: #4CAF50;
+      --lightGreen: #81C784;
+      --background-color: #ffffff;
+      --white: #fcffff;
+      --blue: #007BFF;
+      --lightBlue: #96aec7;
+      --border-radius: 10px;
+      --transition-speed: 0.35s;
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    * {
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    body {
+      background-color: var(--background-color);
+      color: #333;
+      margin: 0;
+      padding: 40px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    
+    h1 {
+      margin-bottom: 25px;
+    }
+    
+    label {
+      font-weight: bold;
+      color: var(--blue);
+      margin: 10px 0 5px;
+    }
+    
+    input, textarea, select {
+      width: 100%;
+      max-width: 400px;
+      padding: 10px;
+      border: 2px solid var(--lightBlue);
+      border-radius: var(--border-radius);
+      background-color: var(--white);
+      font-size: 16px;
+      text-align: center;
+      transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
+      margin-bottom: 20px;
+    }
+    
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--blue);
+      box-shadow: 0 0 0 4px rgba(24, 112, 159, 0.15);
+    }
+    
+    .section {
+      background-color: var(--white);
+      padding: 5px;
+      box-shadow: var(--shadow);
+      border-radius: var(--border-radius);
+      margin-bottom: 2px;
+      width: 100%;
+      max-width: 600px;
+    }
+    
+    button {
+      padding: 12px 24px;
+      font-size: 16px;
+      background-color: var(--lightBlue);
+      color: white;
+      border: none;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      transition: background-color var(--transition-speed), transform var(--transition-speed);
+      box-shadow: var(--shadow);
+      margin-top: 10px;
+      margin-bottom: 20px;
+    }
+    
+    button:hover {
+      background-color: var(--blue);
+      transform: scale(1.03);
+    }
+    
+    .liste-dynamique textarea {
+      height: 130px;
+      resize: vertical;
+    }
+    .row {
+      display: flex;
+      gap: 20px;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    
+    .row .field {
+      flex: 1;
+      min-width: 120px;
+    }
+    
+    .row.textareas .field textarea {
+      height: 130px;
+      resize: vertical;
+      width: 100%;
+      max-width: none;
+    }
+    
+    input.error, textarea.error {
+      border: 2px solid red !important;
+      box-shadow: 0 0 5px rgba(255, 0, 0, 0.3);
+    }
+    
+    .autocomplete-list {
+      position: relative;
+      width: 100%;
+      max-width: 400px;
+      margin: -15px auto 15px auto;
+      text-align: left;
+    }
+    
+    .autocomplete-list div {
+      background-color: white;
+      border: 1px solid var(--lightBlue);
+      padding: 8px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .autocomplete-list div:hover {
+      background-color: var(--lightGreen);
+    }
+    
+    #listeCompetences {
+      border: 1px solid var(--lightBlue);
+      border-radius: 5px;
+      padding: 10px;
+      background: #fff;
+      max-height: 300px;
+      width: 400px;
+      overflow-y: auto;
+      margin-top: 5px;
+      list-style: none;
+      font-size: 0.93em;
+      text-align: left;
+    }
+    
+    /* Styles Flexbox pour organiser le formulaire à gauche et les compétences à droite */
+    .form-container {
+      display: flex; /* Utilisation de Flexbox pour aligner les éléments horizontalement */
+      justify-content: space-between; /* Répartition égale de l'espace entre les deux colonnes */
+      align-items: flex-start; /* Aligner les éléments au début */
+      gap: 10px; /* Espacement entre les colonnes */
+      width: 100%;
+      max-width: 1000px; /* Limiter la largeur totale à 1000px */
+      margin: 0 auto;
+    }
+    
+    /* Partie gauche du formulaire */
+    .form-left {
+      flex: 0 0 70%; /* 60% de la largeur pour la partie gauche */
+      display: flex;
+      flex-direction: column; /* Aligner les éléments verticalement */
+      gap: 15px; /* Espacement entre les champs */
+      align-items: center; /* Centrer les éléments à gauche */
+    }
+    
+    /* Partie droite pour les compétences */
+    .form-right {
+      flex: 0 0 25%; /* 35% de la largeur pour la partie droite */
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      align-items: flex-start;
+    }
+    
+    /* Liste des compétences (affichée à droite) */
+    #listeCompetences {
+      list-style-type: none;
+      padding: 0;
+      margin-top: 10px;
+    }
+    
+    #listeCompetences li {
+      padding: 8px;
+      background-color: var(--lightBlue);
+      margin-bottom: 5px;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: background-color 0.2s;
+    }
+    
+    #listeCompetences li:hover {
+      background-color: var(--lightGreen);
+      color: white;
+    }
+</style>
+
+    
+</head>
+<body>
+  <h1>📝 Création d'une fiche d'évaluation</h1>
+  <form id="evalForm" class="form-container">
+    <!-- Partie gauche : Formulaire -->
+    <div class="form-left">
+      <div class="section row">
+        <div class="field">
+          <label for="annee">Année :</label>
+          <input type="text" id="annee" name="annee" placeholder="2025-2026" required />
+        </div>
+        <div class="field">
+          <label for="periode">Période :</label>
+          <input type="text" id="periode" name="periode" placeholder="P5" required />
+        </div>
+      </div>
+
+      <div class="section">
+        <label for="domaine">Domaine d'apprentissage : Nom de groupe</label>
+        <input type="text" id="domaine" name="domaine" placeholder="Géométrie : Les lézards" required />
+      </div>
+
+      <div class="section row textareas">
+        <div class="field">
+          <label for="eleves">Prénom - Prof (un par ligne) :</label>
+          <textarea id="eleves" placeholder="Haytam - Alexis" required></textarea>
+        </div>
+        <div class="field">
+          <label for="competences">Compétences (une par ligne) :</label>
+          <textarea id="competences" placeholder="L23" required></textarea>
+        </div>
+      </div>
+
+      <button id="submitBtn" style="background-color: var(--green);" type="submit">Créer l'évaluation</button>
+    </div>
+
+    <!-- Partie droite : Compétences -->
+    <div class="form-right">
+      <button type="button" onclick="afficherCompetences()">Voir les compétences 📚</button>
+      <ul id="listeCompetences" style="display:none;"></ul>
+    </div>
+  </form>
+
+  <p id="message" style="margin-top:2px; font-weight:bold;"></p>
+</body>
+
+
+  <script>
+document.getElementById("evalForm").addEventListener("submit", async function (e) {
+  e.preventDefault();
+
+  const anneeInput = document.getElementById("annee");
+  const periodeInput = document.getElementById("periode");
+  const domaineInput = document.getElementById("domaine");
+  const elevesInput = document.getElementById("eleves");
+  const competencesInput = document.getElementById("competences");
+  const msg = document.getElementById("message");
+  msg.textContent = "";
+  msg.style.color = "red";
+
+  // Nettoyage des erreurs visuelles
+  [anneeInput, periodeInput, domaineInput, elevesInput, competencesInput].forEach(el => el.classList.remove("error"));
+
+  // ✅ Vérification année
+  const annee = anneeInput.value.trim();
+  const anneeRegex = /^(\d{4})-(\d{4})$/;
+  const matchAnnee = annee.match(anneeRegex);
+  if (!matchAnnee || parseInt(matchAnnee[2]) !== parseInt(matchAnnee[1]) + 1) {
+    anneeInput.classList.add("error");
+    msg.textContent = "❌ Format incorrect pour l'année (ex: 2025-2026).";
+    return;
+  }
+
+  // ✅ Vérification période
+  const periode = periodeInput.value.trim();
+  if (!/^P[1-5]$/.test(periode)) {
+    periodeInput.classList.add("error");
+    msg.textContent = "❌ La période doit être au format P1 à P5 (ex: P3).";
+    return;
+  }
+
+  // ✅ Vérification et correction élèves
+  const elevesRaw = elevesInput.value.trim().split("\n");
+  const eleves = [];
+
+  for (let i = 0; i < elevesRaw.length; i++) {
+    const ligne = elevesRaw[i].trim();
+    const [prenom1, prenom2] = ligne.split("-").map(x => x?.trim());
+    if (!prenom1 || !prenom2) {
+      elevesInput.classList.add("error");
+      msg.textContent = `❌ Ligne ${i + 1} des élèves invalide. Utilisez "Prénom - Prénom du prof".`;
+      return;
+    }
+    const formatPrenom = (str) => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+    eleves.push({ nom: formatPrenom(prenom1), prof: formatPrenom(prenom2) });
+  }
+
+  // ✅ Vérification compétences
+  let competences = competencesInput.value.trim().split("\n").map(c => c.trim());
+  const competenceRegex = /^[A-Z]{1,}[0-9]{1,}$/;
+
+  for (let i = 0; i < competences.length; i++) {
+    if (!competenceRegex.test(competences[i])) {
+      competencesInput.classList.add("error");
+      msg.textContent = `❌ Compétence invalide à la ligne ${i + 1}. Format attendu en majuscule : LETTRES+CHIFFRE (ex: L23, RM131).`;
+      return;
+    }
+  }
+
+  // Ajout automatique "commentaire"
+  if (!competences.includes("commentaire")) {
+    competences.push("commentaire");
+  }
+
+  const domaine = domaineInput.value.trim(); // pas de validation spécifique ici
+
+  if (/ P[1-5]$/i.test(domaine)) {
+    domaineInput.classList.add("error");
+    msg.textContent = "❌ N'ajoutez pas la période dans le nom du domaine. Elle sera ajoutée automatiquement.";
+    return;
+  }
+
+  // ✅ Vérifier que toutes les compétences existent
+  const competencesInconnues = competences.filter(c => c !== "commentaire" && !(c in competencesMap));
+  if (competencesInconnues.length > 0) {
+    competencesInput.classList.add("error");
+    msg.textContent = `❌ Les compétences suivantes sont inconnues : ${competencesInconnues.join(', ')}`;
+    return;
+  }
+
+
+  // ✅ Envoi
+  const res = await fetch("/setup-evaluation", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ annee, periode, domaine, eleves, competences })
+  });
+
+  if (res.ok) {
+    msg.textContent = "✅ Évaluation créée avec succès.";
+    msg.style.color = "green";
+
+    const elements = document.querySelectorAll('input, textarea');
+    elements.forEach(element => {
+      element.style.border = '3px double var(--green)';
+    });
+
+    document.getElementById('submitBtn').innerText = "Création ...";
+    document.getElementById('submitBtn').style.backgroundColor = "var(--green)";
+    setTimeout(() => { window.location.href = "evaluations.html"; }, 1000);
+  } else {
+    msg.textContent = "❌ Erreur lors de la création.";
+    msg.style.color = "red";
+  }
+});
+
+async function afficherCompetences() {
+  const liste = document.getElementById("listeCompetences");
+
+  // Si la liste est déjà affichée, on la cache
+  if (liste.style.display === "block") {
+    liste.style.display = "none";
+    return;
+  }
+
+  try {
+    const res = await fetch("/competences");
+    const data = await res.json();
+
+    const map = data.competences; // Récupérer l'objet des compétences
+    if (!map || typeof map !== "object") {
+      throw new Error("Format incorrect");
+    }
+
+    liste.innerHTML = ""; // Vider la liste
+    for (const [code, description] of Object.entries(map)) {
+      const li = document.createElement("li");
+      li.textContent = `${code} – ${description}`;
+
+      // Ajouter un événement de clic sur chaque élément de la liste
+      li.addEventListener("click", () => {
+        // Récupérer la valeur actuelle du champ compétences (en gardant le texte existant)
+        const currentValue = document.getElementById("competences").value.trim();
+        
+        // Ajouter un retour à la ligne et le code de la compétence à la fin
+        const newValue = currentValue + (currentValue ? "\n" : "") + code;
+
+        // Mettre à jour la valeur du textarea
+        document.getElementById("competences").value = newValue;
+
+        // Fermer la liste des compétences
+        //liste.style.display = "none";
+      });
+
+      liste.appendChild(li); // Ajouter l'élément à la liste
+    }
+
+    // Afficher la liste
+    liste.style.display = "block";
+  } catch (err) {
+    console.error("Erreur de chargement des compétences :", err);
+    liste.innerHTML = "<li style='color:red;'>Erreur de chargement.</li>";
+    liste.style.display = "block";
+  }
+}
+
+
+
+
+
+
+    // Détection automatique de l'année scolaire et de la période
+    window.addEventListener("DOMContentLoaded", () => {
+      const now = new Date();
+      const month = now.getMonth(); // 0 = Janvier, 11 = Décembre
+      const year = now.getFullYear();
+  
+      // Déterminer l'année scolaire (septembre à août)
+      let startYear, endYear;
+      if (month >= 8) { // Septembre à Décembre => année scolaire commence cette année
+        startYear = year;
+        endYear = year + 1;
+      } else {
+        startYear = year - 1;
+        endYear = year;
+      }
+      const anneeScolaire = `${startYear}-${endYear}`;
+  
+      // Déterminer la période
+      let periode;
+      if (month === 8 || month === 9) periode = "P1";        // Sept, Oct
+      else if (month === 10 || month === 11) periode = "P2"; // Nov, Dec
+      else if (month === 0 || month === 1) periode = "P3";   // Jan, Feb
+      else if (month === 2 || month === 3) periode = "P4";   // Mar, Apr
+      else if (month === 4 || month === 5) periode = "P5";   // May, Jun
+      else periode = ""; // Juillet, Août => rien (optionnel)
+  
+      // Pré-remplissage
+      document.getElementById("annee").value = anneeScolaire;
+      document.getElementById("periode").value = periode;
+      // Focus dans domaine
+      document.getElementById('domaine').focus();
+    });
+
+
+let competencesMap = {};
+
+window.addEventListener("DOMContentLoaded", async () => {
+  try {
+    const res = await fetch("/competences");
+    const data = await res.json();
+
+    if (data && typeof data.competences === "object") {
+      competencesMap = data.competences;
+    } else {
+      console.error("Le format JSON est incorrect. Clé 'competences' attendue.");
+    }
+  } catch (err) {
+    console.error("Erreur de chargement des compétences :", err);
+  }
+});
+
+
+const competencesInput = document.getElementById("competences");
+const suggestionsDiv = document.getElementById("suggestions");
+
+competencesInput.addEventListener("input", function () {
+  const saisie = this.value.split("\n").pop().trim().toUpperCase();
+  suggestionsDiv.innerHTML = "";
+
+  if (saisie.length < 1 || Object.keys(competencesMap).length === 0) return;
+
+  const correspondants = Object.keys(competencesMap)
+    .filter(c => c.startsWith(saisie))
+    .slice(0, 5);
+
+  correspondants.forEach(code => {
+    const item = document.createElement("div");
+    item.textContent = `${code} – ${competencesMap[code]}`;
+    item.title = competencesMap[code]; // description au survol
+
+    item.addEventListener("click", () => {
+      const lignes = competencesInput.value.trim().split("\n");
+      lignes[lignes.length - 1] = code;
+      competencesInput.value = lignes.join("\n") + "\n";
+      suggestionsDiv.innerHTML = "";
+      competencesInput.focus();
+    });
+
+    suggestionsDiv.appendChild(item);
+  });
+});
+
+
+
+
+
+
+  </script>
+  
+</body>
+</html>

@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Liste des évaluations</title>
+  <style>
+      :root {
+      --green: #4CAF50; /* Un vert vif */
+      --lightGreen: #81C784; /* Un vert clair et frais */
+      --lightChocolate: #d16524;
+      --background-color: white;
+      --pink: #eb7880;
+      --white: #fcffff;
+      --purple: #caa7d6;
+      --blue: #18709f;
+      --lightBlue: #4adde7;
+      --rouge: #F44336; /* Un rouge vif */
+      --border-radius: 10px;
+      --transition-speed: 0.35s;
+      }
+/* Base générale */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f8f9fa;
+  color: #333;
+  padding: 20px;
+  line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap; /* pour éviter les débordements en petit écran */
+}
+
+/* Section principale (évaluations) */
+#listeEvaluations {
+  flex: 1;
+  min-width: 60%;
+}
+
+/* Bilans alignés à droite */
+#bilans {
+  width: 300px;
+  background-color: #ffffff;
+  border: 1px solid #ddd;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  margin-left: auto;
+  position: absolute;
+  top: 40px;
+  right: 50px;
+}
+
+/* Optionnel : amélioration des <select> dans #bilans */
+#bilans select {
+  width: 100%;
+  margin-top: 10px;
+  margin-bottom: 15px;
+  padding: 10px;
+  font-size: 16px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+#commentaires {
+  width: 300px;
+  background-color: #ffffff;
+  border: 1px solid #ddd;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  margin-left: auto;
+  position: absolute;
+  bottom: 70px;
+  right: 50px;
+}
+.commentaireButton {
+  background: #d6dade;
+  border: 1px dotted #caa7d6;
+}
+.commentaireButton:hover {
+  background: #007BFF;
+  border: 1px dotted #caa7d6;
+}
+
+h1 {
+  color: #222;
+  font-size: 28px;
+  margin-bottom: 20px;
+}
+
+/* Liste des évaluations */
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+li {
+  background: #ffffff;
+  border: 1px solid #ddd;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.2s ease-in-out;
+}
+
+li:hover {
+  background: #f1f1f1;
+}
+
+a {
+  text-decoration: none;
+  color: #007BFF;
+  font-weight: 600;
+  transition: color 0.2s ease-in-out;
+}
+
+a:hover {
+  text-decoration: underline;
+  color: #0056b3;
+}
+
+/* Boutons */
+button,
+.createButton {
+  background-color: #007BFF;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 15px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s ease;
+  margin-top: 10px;
+}
+
+button:hover,
+.createButton:hover {
+  background-color: #0056b3;
+}
+
+/* Icones boutons */
+.navJournalButton {
+  max-width: 24%;
+  padding: 7px;
+}
+
+/* Sélecteurs */
+select {
+  appearance: none;
+  background-color: white;
+  border: 1px solid #ccc;
+  padding: 10px 12px;
+  font-size: 16px;
+  border-radius: 4px;
+  color: #333;
+}
+
+#selectProf:hover{
+  cursor: pointer;
+}
+
+/* Style pour la boîte de dialogue */
+#dialog {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    border: 1px solid #ccc;
+    border-radius: 22px;
+    padding: 20px;
+    background-color: white;
+    z-index: 1000;
+    width: 210px;
+}
+#overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.95);
+    z-index: 999;
+}
+#passwordInput{
+    width: 90%;
+}
+#confirmButton {
+    background: var(--green);
+    width: 150px;
+
+}
+#cancelButton {
+    background: var(--rouge);
+    width: 150px;
+
+}
+  </style>
+</head>
+<body>
+  <div id="overlay" style="display: none;"></div>
+  <div id="dialog"  style="display: none;">
+      <label for="passwordInput">Mot de passe adulte :</label>
+      <input type="password" id="passwordInput"/>
+      <button id="confirmButton">Valider</button>
+      <button id="cancelButton">Annuler</button>
+  </div>
+
+
+  <h1>📚 Évaluations</h1>
+  <ul id="listeEvaluations"></ul>
+
+  <hr />
+  <button onclick="window.location.href='eval-setup.html';" class="createButton">Créer une nouvelle fiche d'éval</button>
+  <hr />
+
+
+  <div id="bilans">
+    <h1>⚙️ Générer un Bilan</h1>
+    <select id="selectAnnee">
+      <option value="">📅 Sélectionner une année</option>
+    </select>
+    
+    <select id="selectPeriode" style="display:none;">
+      <option value="">🕓 Sélectionner une période</option>
+    </select>
+    
+    <select id="selectProf" style="display:none;">
+      <option value="">👩‍🏫 Sélectionner un prof</option>
+    </select>
+    
+    <select id="selectEleve" style="display:none;" onchange="redirigerVersEleve()">
+      <option value="">👧 Sélectionner un.e élève</option>
+    </select>
+      
+    <p id="message">⚠️ S'assurer que les évaluations ont le statut <span style="color: green">"terminée"</span> pour n'oublier aucune compétence. Vous pourrez aussi en ajouter manuellement ci-après.</p>
+  </div>
+
+  <div id="commentaires">
+    <h1>💬 Commentaires</h1>
+    <button class="commentaireButton" onclick="window.location.href='commentaires.html';">🧩 Rassembler</button>
+  </div>
+  
+  
+  
+
+  <script>
+    // Verifier si l'utilisateur est un adulte -----------------------------------------------
+    // Pour récupérer la variable admin
+    let isAdmin = JSON.parse(localStorage.getItem('admin'));
+
+    // Fonction pour afficher la boîte de dialogue de mot de passe
+    function showPasswordDialog() {
+        document.getElementById('overlay').style.display = 'block';
+        document.getElementById('dialog').style.display = 'block';
+
+        const passwordInput = document.getElementById('passwordInput');
+        passwordInput.focus();
+
+        // Écouteur d'événements pour la touche ENTER
+        passwordInput.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                const password = passwordInput.value;
+                if (password === "1968" || password === "dirvaulx") {
+                    closeDialog();
+                } else {
+                    alert("Code adulte requis");
+                }
+            }
+        });
+
+        document.getElementById('confirmButton').onclick = function() {
+            const password = passwordInput.value;
+            if (password === "1968" || password === "dirvaulx") {
+                closeDialog();
+            } else {
+                window.top.location.href = "../index.html";
+            }
+        };
+
+        document.getElementById('cancelButton').onclick = function() {
+            window.top.location.href = "../index.html";
+        };
+    }
+
+    function closeDialog() {
+        document.getElementById('overlay').style.display = 'none';
+        document.getElementById('dialog').style.display = 'none';
+        document.getElementById('passwordInput').value = ''; // Réinitialiser le champ de saisie
+    }
+    // Vérifie si l'utilisateur est admin
+    if (isAdmin) {
+        // tout est ok : ne rien faire
+    } else {
+        showPasswordDialog();
+    }
+    // ---------------------------------------------------------------------------------------
+
+
+    let evaluations = [];
+
+    async function chargerEvaluations() {
+  const res = await fetch("/liste-domaines");
+  if (!res.ok) return;
+
+  evaluations = await res.json();
+  console.log("Évaluations chargées :", evaluations);
+
+  // Affichage global des évaluations (indépendant des filtres)
+  const listeEvaluations = document.getElementById("listeEvaluations");
+  evaluations.forEach(({ annee, periode, domaine, etat }) => {
+    const li = document.createElement("li");
+
+    const lien = document.createElement("a");
+    lien.href = `eval.html?domaine=${encodeURIComponent(domaine)}`;
+    lien.textContent = `📝 ${annee} - ${domaine}`;
+    li.appendChild(lien);
+
+    const etatSpan = document.createElement("span");
+    etatSpan.textContent = `(${etat})`;
+    etatSpan.style.color = etat === "terminée" ? "green" : "orange";
+    li.appendChild(etatSpan);
+
+    const supprimerBtn = document.createElement("span");
+        supprimerBtn.textContent = "🗑️";
+        supprimerBtn.title = "Supprimer cette évaluation";
+        supprimerBtn.style.color = "red";
+        supprimerBtn.style.cursor = "pointer";
+  
+        supprimerBtn.onclick = async () => {
+          if (confirm(`Supprimer l'évaluation "${domaine}" ?`)) {
+            const res = await fetch(`/supprimer-evaluation/${encodeURIComponent(domaine)}`, { method: 'DELETE' });
+            if (res.ok) {
+              li.remove();
+            } else {
+              alert("Erreur lors de la suppression.");
+            }
+          }
+        };
+
+        li.appendChild(supprimerBtn);
+
+    listeEvaluations.appendChild(li);
+  });
+}
+chargerEvaluations();
+
+
+async function chargerBilans() {
+  const res = await fetch("/liste-domaines");
+  if (!res.ok) return;
+
+  evaluations = await res.json();
+  console.log("Évaluations chargées :", evaluations);
+
+  // Extraire toutes les années sans filtrer par état
+  const annees = [...new Set(evaluations.map(e => e.annee))].sort();
+  console.log("Années disponibles :", annees);
+
+  const selectAnnee = document.getElementById("selectAnnee");
+  selectAnnee.innerHTML = '<option value="">📅  Sélectionner une année </option>';
+
+  annees.forEach(annee => {
+    const option = document.createElement("option");
+    option.value = annee;
+    option.textContent = annee;
+    selectAnnee.appendChild(option);
+  });
+
+  console.log("Options année ajoutées :", selectAnnee.innerHTML);
+
+  selectAnnee.addEventListener("change", function () {
+    const anneeChoisie = this.value;
+    console.log("Année choisie :", anneeChoisie);
+
+    // Extraire les périodes pour l'année choisie
+    const periodes = [...new Set(
+      evaluations.filter(e => e.annee === anneeChoisie).map(e => e.periode)
+    )].sort();
+    console.log("Périodes disponibles pour l'année choisie :", periodes);
+
+    const selectPeriode = document.getElementById("selectPeriode");
+    selectPeriode.innerHTML = '<option value="">🕓 Sélectionner une période </option>';
+    selectPeriode.style.display = "inline-block"; // Assurez-vous que ce sélecteur devient visible
+
+    periodes.forEach(p => {
+      const option = document.createElement("option");
+      option.value = p;
+      option.textContent = p;
+      selectPeriode.appendChild(option);
+    });
+
+    console.log("Options période ajoutées :", selectPeriode.innerHTML);
+
+    document.getElementById("selectProf").style.display = "none";
+    document.getElementById("selectEleve").style.display = "none";
+  });
+
+  document.getElementById("selectPeriode").addEventListener("change", function () {
+    const annee = document.getElementById("selectAnnee").value;
+    const periode = this.value;
+    console.log("Période choisie :", periode);
+
+    // Extraire tous les professeurs uniques pour cette année et période en prenant en compte tous les élèves
+    const profs = [...new Set(
+      evaluations
+        .filter(e => e.annee === annee && e.periode === periode)
+        .flatMap(e => e.eleves.map(el => el.prof)) // On récupère tous les professeurs des élèves
+    )].sort();
+    console.log("Professeurs disponibles pour la période choisie :", profs);
+
+    const selectProf = document.getElementById("selectProf");
+    selectProf.innerHTML = '<option value="">👩‍🏫 Sélectionner un.e prof </option>';
+    selectProf.style.display = "inline-block"; // Assurez-vous que ce sélecteur devient visible
+
+    profs.forEach(p => {
+      const option = document.createElement("option");
+      option.value = p;
+      option.textContent = p;
+      selectProf.appendChild(option);
+    });
+
+    console.log("Options professeur ajoutées :", selectProf.innerHTML);
+
+    document.getElementById("selectEleve").style.display = "none";
+  });
+
+  document.getElementById("selectProf").addEventListener("change", function () {
+    const annee = document.getElementById("selectAnnee").value;
+    const periode = document.getElementById("selectPeriode").value;
+    const prof = this.value;
+    console.log("Professeur choisi :", prof);
+
+    // Extraire les élèves pour l'année, la période et le professeur choisis
+    const elevesSet = new Set();
+    evaluations
+      .filter(e => e.annee === annee && e.periode === periode)
+      .forEach(e => {
+        e.eleves
+          .filter(el => el.prof === prof)  // Filtrer les élèves ayant ce professeur
+          .forEach(el => elevesSet.add(el.nom)); // Ajouter les noms des élèves
+      });
+
+    const eleves = [...elevesSet].sort();
+    console.log("Élèves disponibles pour le professeur choisi :", eleves);
+
+    const selectEleve = document.getElementById("selectEleve");
+    selectEleve.innerHTML = '<option value="">👧 Sélectionner un élève </option>';
+    selectEleve.style.display = "inline-block"; // Assurez-vous que ce sélecteur devient visible
+
+    eleves.forEach(nom => {
+      const option = document.createElement("option");
+      option.value = nom;
+      option.textContent = nom;
+      selectEleve.appendChild(option);
+    });
+
+    console.log("Options élève ajoutées :", selectEleve.innerHTML);
+  });
+}
+
+
+chargerBilans();
+  
+function redirigerVersEleve() {
+  const eleve = document.getElementById("selectEleve").value;
+  const annee = document.getElementById("selectAnnee").value;
+  const periode = document.getElementById("selectPeriode").value;
+
+  if (eleve && annee && periode) {
+    window.location.href = `eleve.html?eleve=${encodeURIComponent(eleve)}&annee=${encodeURIComponent(annee)}&periode=${encodeURIComponent(periode)}`;
+  }
+}
+
+
+  document.getElementById('selectAnnee').addEventListener('click', function(){
+    document.getElementById('message').style.display = "none";
+  });
+  </script>
+</body>
+</html>

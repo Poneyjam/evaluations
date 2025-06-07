@@ -1,0 +1,46 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Logs
+logs
+*.log
+
+# Runtime
+.pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage (si tests)
+coverage/
+
+# Build
+dist/
+build/
+
+# MacOS
+.DS_Store
+
+# Linux
+*.swp
+
+# Env files (jamais pousser de secrets !)
+.env
+.env.local
+.env.*.local
+
+# Editor/IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# System files
+Thumbs.db
+Desktop.ini
+
+# Git
+.git/

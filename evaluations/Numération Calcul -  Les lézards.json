@@ -1,0 +1,268 @@
+{
+  "annee": "2024-2025",
+  "periode": "P5",
+  "domaine": "Numération Calcul (P5) Les lézards",
+  "eleves": [
+    {
+      "nom": "Eline",
+      "prof": "Alexis"
+    },
+    {
+      "nom": "Chahine",
+      "prof": "Coline"
+    },
+    {
+      "nom": "Elias",
+      "prof": "Maud"
+    },
+    {
+      "nom": "Lina",
+      "prof": "Maud"
+    },
+    {
+      "nom": "Afrane",
+      "prof": "Delphine"
+    },
+    {
+      "nom": "Ikra",
+      "prof": "Delphine"
+    },
+    {
+      "nom": "Jyhed",
+      "prof": "Delphine"
+    },
+    {
+      "nom": "Naïla",
+      "prof": "Delphine"
+    },
+    {
+      "nom": "Asma",
+      "prof": "Marie"
+    },
+    {
+      "nom": "Imrân",
+      "prof": "Marie"
+    },
+    {
+      "nom": "Kamil",
+      "prof": "Marie"
+    }
+  ],
+  "competences": [
+    "N199",
+    "N379",
+    "N479",
+    "N6",
+    "N10",
+    "N12",
+    "N13",
+    "Cal1",
+    "Cal3",
+    "Cal6",
+    "Cal9",
+    "Cal10",
+    "Cal20",
+    "Cal29",
+    "commentaire"
+  ],
+  "etat": "terminée",
+  "scores": {
+    "Eline": {
+      "N199": "non",
+      "N379": "non",
+      "N479": "non",
+      "N6": null,
+      "N10": "non",
+      "N12": "oui",
+      "N13": null,
+      "Cal1": "non",
+      "Cal3": "",
+      "Cal6": null,
+      "Cal 9": null,
+      "Cal10": "",
+      "Cal20": null,
+      "Cal29": null,
+      "commentaire": "Construction du nombre à travailler. Niveau moyenne section de maternelle.Ne sait pas le plus grand entre le 9 et le 6.Pas de progrès en comptine numérique.Lecture des 30 ok mais pas 40 50 60Ne peut pas dénombrer des petites quantités en manipulant sans se tromper.Compter de 10 en 10 jusqu’à 100 60 70 80….Peut s’entraîner à compter à l’envers en partant de 10. Reconnaitre les constellations doigts < 9 d’un simple coup d’oeil. ** N12**"
+    },
+    "Chahine": {
+      "N199": "déjà",
+      "N379": "oui",
+      "N479": "oui",
+      "N6": "déjà",
+      "N10": "déjà",
+      "N12": "déjà",
+      "N13": "non",
+      "Cal1": "déjà",
+      "Cal3": "déjà",
+      "Cal6": "non",
+      "Cal 9": null,
+      "Cal10": "oui",
+      "Cal20": "non",
+      "Cal29": "oui",
+      "commentaire": "Additions posées en colonnes avec retenue ok mais ne fixe pas de sens. Peut apprendre les doubles par coeur. ** N379, N479, Cal10, Cal29, Cal9**",
+      "Cal9": "oui"
+    },
+    "Elias": {
+      "N199": "déjà",
+      "N379": "oui",
+      "N479": "oui",
+      "N6": "déjà",
+      "N10": "déjà",
+      "N12": "déjà",
+      "N13": "oui",
+      "Cal1": "déjà",
+      "Cal3": "déjà",
+      "Cal6": "oui",
+      "Cal 9": null,
+      "Cal10": "oui",
+      "Cal20": "oui",
+      "Cal29": "déjà",
+      "commentaire": "TB. Valeur de position acquise. Fixe du sens. ** N379, N479, N13, Cal6, Cal10, Cal20, Cal9**",
+      "Cal9": "oui"
+    },
+    "Lina": {
+      "N199": "oui",
+      "N379": "non",
+      "N479": "non",
+      "N6": "déjà",
+      "N10": "déjà",
+      "N12": "déjà",
+      "N13": "oui",
+      "Cal1": "déjà",
+      "Cal3": "déjà",
+      "Cal6": "oui",
+      "Cal 9": null,
+      "Cal10": "oui",
+      "Cal20": "non",
+      "Cal29": "déjà",
+      "commentaire": "La valeur de position est aqcuise. Lina fixe du sens sur les nombres et les calculs. Elle peut réviser les doubles jusqu’à 20 (cahier orange) et la lecture et l’écriture des nombre de 70 à 99. ** N199, N13, Cal6, Cal10, Cal9**",
+      "Cal9": "oui"
+    },
+    "Afrane": {
+      "N199": "non",
+      "N379": "non",
+      "N479": "non",
+      "N6": "non",
+      "N10": "non",
+      "N12": "non",
+      "N13": "non",
+      "Cal1": "déjà",
+      "Cal3": "non",
+      "Cal6": "non",
+      "Cal 9": null,
+      "Cal10": "non",
+      "Cal20": "non",
+      "Cal29": "non",
+      "commentaire": "niveau MS ** **",
+      "Cal9": "non"
+    },
+    "Ikra": {
+      "N199": "non",
+      "N379": "déjà",
+      "N479": "déjà",
+      "N6": "oui",
+      "N10": "non",
+      "N12": "non",
+      "N13": "non",
+      "Cal1": "déjà",
+      "Cal3": "déjà",
+      "Cal6": "non",
+      "Cal 9": null,
+      "Cal10": "non",
+      "Cal20": "non",
+      "Cal29": "déjà",
+      "commentaire": "Pas de progrès en comptine numérique. Bloque à 69. Après 60 il y a 70 ! A mémorisé la position des dizaines et des unités mais ne comprend pas le sens. Ne peut pas ajouter une dizaine à un nombre. Lorsqu’elle recule dans la suite numérique elle donne des nombres plus grands. Ne fixe pas de sens mais en progrès sur les démarches opératoires ou le « par coeur ». Peut réviser les doubles. 9 + 9 = 20 ? Compter à l’envers en partant de 10, de 20. Reste très insuffisant pour un passage au CE2. ** N6**",
+      "Cal9": "non"
+    },
+    "Jyhed": {
+      "N199": "oui",
+      "N379": "non",
+      "N479": "non",
+      "N6": "déjà",
+      "N10": "déjà",
+      "N12": "déjà",
+      "N13": "non",
+      "Cal1": "déjà",
+      "Cal3": "déjà",
+      "Cal6": null,
+      "Cal 9": null,
+      "Cal10": "non",
+      "Cal20": null,
+      "Cal29": "oui",
+      "commentaire": "4 + 1 = 41\nConfond position des dizaines / unité\nPeut s’entraîner à compter à l’envers en partant de 20. Lire écrire les nombres entre 70 et 100. Réviser les doubles. ** N199, Cal29, Cal9**",
+      "Cal9": "oui"
+    },
+    "Naïla": {
+      "N199": "non",
+      "N379": "non",
+      "N479": "non",
+      "N6": "non",
+      "N10": "déjà",
+      "N12": null,
+      "N13": "déjà",
+      "Cal1": "déjà",
+      "Cal3": "",
+      "Cal6": "",
+      "Cal 9": null,
+      "Cal10": "non",
+      "Cal20": "non",
+      "Cal29": "déjà",
+      "commentaire": "Ne reconnait pas la constellation des doigts pour 9\nDis « 10 10 » pour dire 20.\nDis « 40 10 »  pour dire 50. Niveau GS.\nPas de progrès en comptine numérique, ni en lecture des nombres entre 30 et 69 (période 2), ni pour les cachottiers. Ne reconnaît pas 14. Se trompe encore de sens pour écrire les chiffres. ** Cal9**",
+      "Cal9": "oui"
+    },
+    "Asma": {
+      "N199": "déjà",
+      "N379": "déjà",
+      "N479": "déjà",
+      "N6": "déjà",
+      "N10": "déjà",
+      "N12": "déjà",
+      "N13": "oui",
+      "Cal1": "déjà",
+      "Cal3": "déjà",
+      "Cal6": "oui",
+      "Cal 9": null,
+      "Cal10": "oui",
+      "Cal20": "non",
+      "Cal29": "déjà",
+      "commentaire": "Posture d’élève à construire : « aller au toilettes »\nPeut réviser les doubles. Compter de 5 en 5 ** N13, Cal6, Cal10, Cal9**",
+      "Cal9": "oui"
+    },
+    "Imrân": {
+      "N199": "oui",
+      "N379": "oui",
+      "N479": "oui",
+      "N6": "oui",
+      "N10": "déjà",
+      "N12": "oui",
+      "N13": "oui",
+      "Cal1": "déjà",
+      "Cal3": "déjà",
+      "Cal6": "oui",
+      "Cal 9": null,
+      "Cal10": "oui",
+      "Cal20": "non",
+      "Cal29": "déjà",
+      "commentaire": "Peut réviser les doubles. Compter de 5 en 5 ** N199, N379, N479, N6, N12, N13, Cal6, Cal10, Cal9**",
+      "Cal9": "oui"
+    },
+    "Kamil": {
+      "N199": "oui",
+      "N379": "oui",
+      "N479": "oui",
+      "N6": "oui",
+      "N10": "déjà",
+      "N12": "oui",
+      "N13": "oui",
+      "Cal1": "déjà",
+      "Cal3": "déjà",
+      "Cal6": "oui",
+      "Cal 9": null,
+      "Cal10": "oui",
+      "Cal20": "oui",
+      "Cal29": "déjà",
+      "commentaire": "TB ** N199, N379, N479, N6, N12, N13, Cal6, Cal10, Cal20, Cal9**",
+      "Cal9": "oui"
+    }
+  }
+}

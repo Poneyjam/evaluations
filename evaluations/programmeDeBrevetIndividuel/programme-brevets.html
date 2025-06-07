@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générer un bilan</title>
+    <style>
+    @font-face {
+        font-family: 'Comic';
+        src: url(./policeDecriture/ComicSansMS.ttf) format('truetype');
+    }
+    * {
+        font-size: 16px;
+        font-family: "Comic";
+        text-align: justify;
+    }
+  h1, input, textarea, button {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+
+#imageHelper {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    max-width: 50%;
+}
+#formulaire {
+    border: #888 dotted 4px;
+    margin: auto;
+    padding: 1rem;
+}
+#formulaire button, 
+#formulaire input {
+    text-align: center;
+    border-radius: 8px; /* Réduit le rayon pour un look plus moderne */
+    padding: 10px 20px; /* Ajoute du rembourrage pour un meilleur confort */
+    height: auto; /* Utilise auto pour s'adapter au contenu */
+    border: 1px solid #ccc; /* Ajoute une bordure légère */
+    background-color: #f0f0f0; /* Couleur de fond neutre */
+    transition: background-color 0.3s, transform 0.2s; /* Ajoute une transition douce */
+}
+
+#formulaire button:hover, 
+#formulaire input:focus {
+    background-color: #e0e0e0; /* Change la couleur de fond au survol ou au focus */
+    transform: scale(1.05); /* Légère augmentation de la taille au survol */
+    border-color: #888; /* Change la couleur de la bordure au survol */
+    outline: none; /* Supprime le contour par défaut */
+}
+#competences-input {
+    width: 60%;
+}
+#message {
+    margin-top: 3rem;
+    color: orange;
+}
+/* Style pour les boutons Retour, Imprimer */
+.navJournalButton {
+    max-width: 24%; padding: 7px;
+}
+.backButton {
+    font-family: "Comic";
+    width: 10%;
+    height: 60px;
+    background-color: lightgray; /* Couleur grey */
+    color: white; /* Couleur du texte */
+    border: none; /* Pas de bordure */
+    border-radius: 4px; /* Coins arrondis */
+    padding: 10px 15px; /* Espace intérieur */
+    cursor: pointer; /* Curseur en main */
+    font-size: 16px; /* Taille de police */
+    margin: 20px auto; /* Marge automatique pour centrer */
+    text-align: center;
+}
+.backButton:hover {
+    background-color: grey; /* Couleur grey */
+
+}
+#periodeDiv, #anneeDiv, #prenom {
+    position: relative;
+    display: block;
+    text-align: center;
+}
+@media print {
+    .noPrint {
+        display: none;
+    }
+    @font-face {
+        font-family: 'Comic';
+        src: url(./policeDecriture/ComicSansMS.ttf) format('truetype');
+    }
+    * {
+        font-size: 26px;
+        font-family: "Comic";
+        text-align: justify;
+    }
+
+            body {
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+                
+            }
+            .tableau_paysage {
+                display: table;
+                width: 91%;
+                height: 100%;
+                border-collapse: collapse;
+                page-break-after: always;
+                padding-bottom: 3px;
+            }
+            .tableau_paysage td {
+                border: none; /* Bordures transparentes */
+                width: 50%; /* Deux colonnes */
+                vertical-align: top;
+                padding-bottom: 46px;
+            }
+            .tableau_paysage th {
+                border: none; /* Bordures transparentes */
+            }
+            input, button {
+                display: none;
+            }
+            
+        }
+    </style>
+</head>
+<body>
+ <b><h3 id="prenom"></h3></b><span id="periodeDiv"></span> <span id="anneeDiv"></span>
+
+<div id="formulaire">
+    <h1>Programme d'impression des brevets</h1>
+    <form id="competences-form">
+        <input type="text" id="eleve-input" placeholder="Prénom de l'élève">
+        <input type="text" id="competences-input" placeholder="Entrer les codes de compétences (ex : AT5, L27, E6, Cal13, Rm6,...)">
+        <button type="button" id="generer-tableau-btn" style="background: lightgreen;">Imprimer les compétences</button>
+    </form>
+</div>
+    <p id="message" class="noPrint"></p>
+
+    <table class="tableau_paysage" id="competences-table"></table>
+    
+    <img id="imageHelper" src="./exemples/exemple.png" style="display: none;">
+
+    <button id="backBtn" class="backButton noPrint" style="display: none;" onclick="window.location.href='../../evaluations/evaluations.html';"><img src="../../svgs/solid/arrows-split-up-and-left.svg" class="navJournalButton"/>Retour</button>
+
+<script>
+    // réupération des data : eleve et compétences
+    let params = new URLSearchParams(document.location.search);
+    let eleve = params.get("eleve");
+    let competencesRecues = params.get("competences");
+    
+    // Afficher la période en cours et l'année
+    let annee = params.get("annee");
+    let periode = params.get("periode");
+    if (periode = "P1"){
+        periode = "Septembre - Octobre"
+    } else if (periode = "P2"){
+        periode = "Novembre - Décembre"
+    } else if (periode = "P3"){
+        periode = "Janvier - Février"
+    } else if (periode = "P4"){
+        periode = "Mars - Avril"
+    } else if (periode = "P5"){
+        periode = "Mai - Juin"
+    } 
+    document.getElementById('periodeDiv').innerText = periode;
+    document.getElementById('anneeDiv').innerText = annee;
+
+    
+
+    if (eleve) {
+        document.getElementById('eleve-input').value = eleve;
+    }
+    if (competencesRecues){
+        document.getElementById('competences-input').value = competencesRecues;
+    }
+
+    let browser;
+
+// Aide à l'impression
+let delayImpression = 4000;
+let imageHelper = document.getElementById('imageHelper');
+
+// griser la case pour les CE1
+const competencesAGriser = ['L23', 'N199', /* ajoute d'autres codes ici si besoin */];
+function doitGriser(code) {
+  return competencesAGriser.includes(code.toUpperCase());
+}
+
+function incrementAideImpressionBrevets() {
+  let count = parseInt(localStorage.getItem('aideImpressionBrevets') || '0', 10);
+  if (count < 2) {
+    count++;
+    localStorage.setItem('aideImpressionBrevets', count.toString());
+  }
+  return count;
+}
+function peutAfficherAideImpressionBrevets() {
+  const count = parseInt(localStorage.getItem('aideImpressionBrevets') || '0', 10);
+  return count < 2;
+}
+
+if (peutAfficherAideImpressionBrevets()) {
+  console.log("Affichage de l'aide...");
+  incrementAideImpressionBrevets(); // aide + 1 fois
+} else {
+    delayImpression = 100;
+}
+
+let COMPETENCES = {}; // Initialement vide
+
+fetch('/competences')
+  .then(response => {
+    if (!response.ok) {
+      throw new Error("Erreur réseau lors du chargement des compétences.");
+    }
+    return response.json();
+  })
+  .then(data => {
+    COMPETENCES = data.competences; // Récupère uniquement l’objet imbriqué
+    console.log("Compétences chargées :", COMPETENCES);
+  })
+
+  .catch(error => {
+    console.error("Erreur lors du chargement des compétences :", error);
+  });
+
+        function getCategorie(code) {
+            switch (true) {
+                case code.startsWith('AT'):
+                    return 'Attitude de travail';  
+                case code.startsWith('P'):
+                    return 'Poésie';  
+                case code.startsWith('CAL'):
+                    return 'Calcul';    
+                case code.startsWith('C'):
+                    return 'Chant';
+                case code.startsWith('LO'):
+                    return 'Langue Orale';   
+                case code.startsWith('L'):
+                    return 'Lecture';
+                case code.startsWith('E'):
+                    return 'Production d\'Ecrits';
+                case code.startsWith('N'):
+                    return 'Numération';     
+                case code.startsWith('G'):
+                    return 'Géométrie'; 
+                case code.startsWith('M'):
+                    return 'Mesure';
+                case code.startsWith('RM'):
+                    return 'Recherche Maths';   
+                default:
+                    return 'Compétence inconnue';
+            }
+        }
+
+            function detectBrowser() {
+                const userAgent = navigator.userAgent;
+
+                if (userAgent.indexOf("Firefox") > -1) {
+                    return "Firefox";
+                } else if (userAgent.indexOf("Chrome") > -1 && userAgent.indexOf("Edg") === -1) {
+                    return "Chrome";
+                } else if (userAgent.indexOf("Edg") > -1) {
+                    return "Edge";
+                } else if (userAgent.indexOf("Safari") > -1) {
+                    return "Safari";
+                } else if (userAgent.indexOf("Opera") > -1 || userAgent.indexOf("OPR") > -1) {
+                    return "Opera";
+                } else {
+                    return "Autre";
+                }
+            }
+        document.getElementById('generer-tableau-btn').addEventListener('click', function() {
+            document.getElementById('message').style.display = "none";
+            const eleveNom = document.getElementById('eleve-input').value;
+            const competencesInput = document.getElementById('competences-input').value;
+            const codes = competencesInput.split(',').map(code => code.trim()).filter(code => code);
+            const competencesParCategorie = {};
+
+            codes.forEach(code => {
+                const competence = COMPETENCES[code];
+                const categorie = getCategorie(code);
+                if (competence) {
+                    if (!competencesParCategorie[categorie]) {
+                        competencesParCategorie[categorie] = [];
+                    }
+                    competencesParCategorie[categorie].push({ code, phrase: competence });
+                }
+            });
+
+
+            const table = document.getElementById('competences-table');
+            table.innerHTML = ''; // Réinitialiser le tableau
+
+            for (const [categorie, competences] of Object.entries(competencesParCategorie)) {
+                const row = table.insertRow();
+                const cell = row.insertCell();
+                cell.innerHTML = `<strong>${categorie}</strong><br>` + competences.map(({code, phrase}) => {
+                    const bg = doitGriser(code) ? 'background-color: lightgray;' : '';
+                    return `<div style="border: 1px solid black; padding: 5px; margin: 4px 0; ${bg}">${phrase}</div>`;
+                }).join('');
+            }
+
+
+            document.getElementById('prenom').innerText = `${eleveNom}`;
+            
+
+            browser = detectBrowser();
+            console.log("L'utilisateur utilise : " + browser);
+
+            if (browser == "Firefox") {
+                imageHelper.src = "./exemples/exemple.png";
+                setTimeout(()=>{
+                    imageHelper.src = "./exemples/exemple2.png";
+                }, delayImpression / 2.5);
+            } else if(browser == "Chrome") {
+                imageHelper.src = "./exemples/exempleChrome.png";
+                setTimeout(()=>{
+                    imageHelper.src = "./exemples/exempleChrome2.png";
+                }, delayImpression / 2.5);
+            } else {
+                //alert("Vous devez utiliser Chrome ou Firefox");
+            }
+            
+            document.getElementById('formulaire').style = "display: none";
+            // Affichage de l'aide à l'impression
+            imageHelper.style = "display: block";
+            document.getElementById('competences-table').style="display: none";
+
+            setTimeout(()=>{
+                document.getElementById('competences-table').style="display: block";
+                
+
+                imageHelper.style = "display: none";
+                window.print();
+
+                
+                document.getElementById('backBtn').style="display: block";
+
+
+                
+            }, delayImpression);
+            
+        });
+
+        browser = detectBrowser();
+        if (browser == "Firefox" || browser == "Chrome" ) {
+            // ne rien afficher
+            document.getElementById('message').innerText = "";
+        } else {
+            document.getElementById('message').innerText = "⚠️ Si vous avez des problèmes d'affichage pour l'impression, copiez l'adresse de cette page et ouvrez-la dans un autre navigateur : Firefox 🦊 ou Chrome 🧭.";
+        }
+
+        document.getElementById('competences-input').focus();
+    </script>
+</body>
+</html>
