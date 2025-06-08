@@ -1,0 +1,118 @@
+{
+  "annee": "2025-2026",
+  "periode": "P1",
+  "domaine": "Alexis Français - CE1 - P1",
+  "eleves": [
+    {
+      "nom": "Nelia",
+      "prof": "Alexis"
+    },
+    {
+      "nom": "Diama",
+      "prof": "Alexis"
+    },
+    {
+      "nom": "Amel",
+      "prof": "Alexis"
+    },
+    {
+      "nom": "Zinedine",
+      "prof": "Alexis"
+    },
+    {
+      "nom": "Pierredavid",
+      "prof": "Alexis"
+    },
+    {
+      "nom": "Eline",
+      "prof": "Alexis"
+    },
+    {
+      "nom": "Franck",
+      "prof": "Alexis"
+    }
+  ],
+  "competences": [
+    "LO4",
+    "L6",
+    "L17",
+    "L20",
+    "L40",
+    "E11",
+    "E23",
+    "commentaire"
+  ],
+  "etat": "terminée",
+  "scores": {
+    "Nelia": {
+      "LO4": "",
+      "L6": null,
+      "L17": null,
+      "L20": null,
+      "L40": null,
+      "E11": null,
+      "E23": null,
+      "commentaire": " ** **"
+    },
+    "Diama": {
+      "LO4": null,
+      "L6": null,
+      "L17": null,
+      "L20": null,
+      "L40": null,
+      "E11": null,
+      "E23": null,
+      "commentaire": null
+    },
+    "Amel": {
+      "LO4": null,
+      "L6": null,
+      "L17": null,
+      "L20": null,
+      "L40": null,
+      "E11": null,
+      "E23": null,
+      "commentaire": null
+    },
+    "Zinedine": {
+      "LO4": null,
+      "L6": null,
+      "L17": null,
+      "L20": null,
+      "L40": null,
+      "E11": null,
+      "E23": null,
+      "commentaire": null
+    },
+    "Pierredavid": {
+      "LO4": null,
+      "L6": null,
+      "L17": null,
+      "L20": null,
+      "L40": null,
+      "E11": null,
+      "E23": null,
+      "commentaire": null
+    },
+    "Eline": {
+      "LO4": null,
+      "L6": null,
+      "L17": null,
+      "L20": null,
+      "L40": null,
+      "E11": null,
+      "E23": null,
+      "commentaire": null
+    },
+    "Franck": {
+      "LO4": null,
+      "L6": null,
+      "L17": null,
+      "L20": null,
+      "L40": null,
+      "E11": null,
+      "E23": null,
+      "commentaire": null
+    }
+  }
+}

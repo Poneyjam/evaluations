@@ -410,7 +410,7 @@ th:not(:has(> span.commentaire-header)) {
 
 // COMPETENCES NOMINATIVES : lecture du fichier competences.json
 async function chargerCompetencesGlobales(competencesUtilisees) {
-    const res = await fetch('/competences.json');
+    const res = await fetch('/competences/competences.json');
     if (!res.ok) {
         console.error("Erreur lors du chargement de competences.json");
         return {};
