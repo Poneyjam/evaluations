@@ -355,12 +355,15 @@ async function afficherEvaluation(data) {
 
     for (const code of competences) {
       const td = document.createElement('td');
-      const score = data.scores?.find(s => s.nom === eleve.nom && s.competence === code)?.valeur || '';
-      td.textContent = score;
+      const scoreObj = data.scores?.find(s => s.eleve_id === eleve.id && s.competence === code);
+      const note = scoreObj?.note || '';
+      td.textContent = note;
       tr.appendChild(td);
     }
+
     tbody.appendChild(tr);
   }
+
 
   table.appendChild(tbody);
 
