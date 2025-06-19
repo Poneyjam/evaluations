@@ -286,6 +286,32 @@ async function chargerEvaluationParId(id) {
   afficherEvaluation(data);
 }
 
+async function chargerCompetencesGlobales(competences) {
+  if (!Array.isArray(competences) || competences.length === 0) {
+    return {};
+  }
+
+  try {
+    const res = await fetch('/competences-descriptions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ competences })
+    });
+
+    if (!res.ok) {
+      console.error('Erreur lors du chargement des descriptions de compétences');
+      return {};
+    }
+
+    const descriptions = await res.json();
+    return descriptions;
+  } catch (err) {
+    console.error('Erreur réseau ou autre:', err);
+    return {};
+  }
+}
+
+
 // Fonction pour charger par domaine
 async function chargerEvaluation(domaine) {
   if (!domaine) return;

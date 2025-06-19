@@ -101,6 +101,39 @@ app.get('/api/check-session', (req, res) => {
 
 // --- API pour gérer évaluations, élèves, scores, commentaires ---
 
+app.post('/competences-descriptions', (req, res) => {
+  const { competences } = req.body;
+  if (!Array.isArray(competences)) {
+    return res.status(400).json({ error: "Le champ 'competences' doit être un tableau." });
+  }
+
+  const filePath = path.join(__dirname, 'public', 'competences', 'competences.json');
+
+  fs.readFile(filePath, 'utf8', (err, data) => {
+    if (err) {
+      console.error('Erreur lecture fichier compétences :', err);
+      return res.status(500).json({ error: "Erreur serveur lors de la lecture des compétences." });
+    }
+
+    let allCompetences;
+    try {
+      allCompetences = JSON.parse(data).competences;
+    } catch (parseErr) {
+      console.error('Erreur parsing JSON compétences :', parseErr);
+      return res.status(500).json({ error: "Erreur serveur lors du parsing des compétences." });
+    }
+
+    // Construire résultat avec les descriptions demandées
+    const result = {};
+    for (const comp of competences) {
+      result[comp] = allCompetences[comp] || "Description non disponible";
+    }
+
+    res.json(result);
+  });
+});
+
+
 // Liste des évaluations
 app.get('/liste-domaines', requireAuth, async (req, res) => {
   try {
