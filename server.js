@@ -101,33 +101,36 @@ app.get('/api/check-session', (req, res) => {
 
 // --- API pour gérer évaluations, élèves, scores, commentaires ---
 
-app.post('/api/competences-descriptions', (req, res) => {
-  console.log('Requête reçue avec body:', req.body);
+app.post('/api/competences-descriptions', async (req, res) => {
+  try {
+    const competences = req.body.competences;
+    console.log('competences reçues:', competences);
 
-  const { competences } = req.body;
-  console.log(competences);
-  
-  if (!Array.isArray(competences) || competences.length === 0) {
-    return res.status(400).json({ error: 'competences doit être un tableau non vide' });
-  }
-
-  pool.query(
-    'SELECT code, description FROM competences_globales WHERE code = ANY($1)',
-    [competences]
-  )
-  .then(result => {
-    const descriptions = {};
-    for (const row of result.rows) {
-      descriptions[row.code] = row.description;
+    if (!Array.isArray(competences)) {
+      return res.status(400).json({ error: 'competences doit être un tableau' });
     }
-    res.json(descriptions);
-  })
-  .catch(err => {
-    console.error('Erreur serveur:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
-  });
-});
 
+    if (competences.length === 0) {
+      return res.status(400).json({ error: 'competences ne doit pas être vide' });
+    }
+
+    const result = await pool.query(
+      'SELECT code, description FROM competences_globales WHERE code = ANY($1::text[])',
+      [competences]
+    );
+
+    res.json(
+      result.rows.reduce((acc, row) => {
+        acc[row.code] = row.description;
+        return acc;
+      }, {})
+    );
+
+  } catch (err) {
+    console.error('Erreur dans /api/competences-descriptions:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 
 // Liste des évaluations
 app.get('/liste-domaines', requireAuth, async (req, res) => {
