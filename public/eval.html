@@ -230,10 +230,12 @@ th:not(:has(> span.commentaire-header)) {
   <label for="domaine" class="noPrint">Choisir un domaine :</label>
   <select id="domaineSelect" class="noPrint"></select>
 
-  <table id="evalTable">
-    <thead></thead>
-    <tbody></tbody>
-  </table>
+  <div id="evaluation-container">
+    <table id="evalTable">
+      <thead></thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
   <br>
   <button id="backBtn" class="noPrint control-button" style="border: 2px solid #999;" onclick="window.location.href='./evaluations.html';">🔙 Retour</button>
@@ -256,451 +258,452 @@ th:not(:has(> span.commentaire-header)) {
 
 
 <script>
-let domaineActuel = "";
-let evalId = null;
+  document.addEventListener('DOMContentLoaded', () => {
 
-// Au chargement, vérifier si id dans URL
-const params = new URLSearchParams(window.location.search);
-evalId = params.get("id");
-const domaineParam = params.get("domaine");
+    let domaineActuel = "";
+    let evalId = null;
 
-if (evalId) {
-  // Chargement par id prioritaire
-  chargerEvaluationParId(evalId);
-} else {
-  // Pas d'id, charger domaines et sélectionner domaine (param ou premier)
-  chargerDomaines(domaineParam);
-}
+    // Au chargement, vérifier si id dans URL
+    const params = new URLSearchParams(window.location.search);
+    evalId = params.get("id");
+    const domaineParam = params.get("domaine");
 
-// Fonction pour charger par id (ton code déjà bon)
-async function chargerEvaluationParId(id) {
-  const res = await fetch(`/evaluation/${id}`);
-  if (!res.ok) {
-    alert("❌ Erreur lors du chargement des données d'évaluation.");
-    return;
-  }
-  const data = await res.json();
-
-  domaineActuel = data.domaine || "";
-  // Mettre à jour titre, table, etc.
-  afficherEvaluation(data);
-}
-
-async function chargerCompetencesGlobales(competences) {
-  if (!competences || !competences.length) return {};
-
-  try {
-    const res = await fetch('/api/competences-descriptions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ competences }),
-    });
-
-    if (!res.ok) throw new Error('Erreur serveur');
-
-    return await res.json();
-  } catch (e) {
-    console.error('Erreur récupération compétences', e);
-    return {};
-  }
-}
-
-// Fonction pour charger par domaine
-async function chargerEvaluation(domaine) {
-  if (!domaine) return;
-  const res = await fetch(`/evaluation/${encodeURIComponent(domaine)}`);
-  if (!res.ok) {
-    alert("Erreur lors du chargement de l'évaluation.");
-    return;
-  }
-  const data = await res.json();
-
-  domaineActuel = domaine;
-  afficherEvaluation(data);
-}
-
-// Affiche les données dans le tableau, extrait commun aux deux chargements
-async function afficherEvaluation(data) {
-  // data.competences : tableau de codes (ex: ["CAL3", "CAL6", ...])
-  const descriptions = await chargerCompetencesGlobales(data.competences);
-
-  // Ensuite tu construis ton tableau en utilisant descriptions[code] pour afficher les titres ou tooltips
-  const table = document.createElement('table');
-
-  // Exemple en-tête avec descriptions
-  const thead = document.createElement('thead');
-  const tr = document.createElement('tr');
-
-  // Colonne élève
-  tr.appendChild(document.createElement('th')).textContent = 'Élève';
-  // Colonne prof
-  tr.appendChild(document.createElement('th')).textContent = 'Prof';
-
-  // Colonnes compétences
-  for (const code of data.competences) {
-    const th = document.createElement('th');
-    th.textContent = code;
-    if (descriptions[code]) {
-      th.title = descriptions[code]; // tooltip avec description
+    if (evalId) {
+      // Chargement par id prioritaire
+      chargerEvaluationParId(evalId);
+    } else {
+      // Pas d'id, charger domaines et sélectionner domaine (param ou premier)
+      chargerDomaines(domaineParam);
     }
-    tr.appendChild(th);
-  }
-  thead.appendChild(tr);
-  table.appendChild(thead);
 
-  // Corps du tableau : parcourir les élèves et leurs scores
-  const tbody = document.createElement('tbody');
-  for (const eleve of data.eleves) {
-    const tr = document.createElement('tr');
-    tr.appendChild(document.createElement('td')).textContent = eleve.nom;
-    tr.appendChild(document.createElement('td')).textContent = eleve.prof;
-
-    for (const code of data.competences) {
-      const td = document.createElement('td');
-      const score = data.scores[eleve.nom]?.[code] ?? '';
-      td.textContent = score;
-      tr.appendChild(td);
-    }
-    tbody.appendChild(tr);
-  }
-  table.appendChild(tbody);
-
-  // Ajouter le tableau au DOM
-  const container = document.getElementById('evaluation-container');
-  container.innerHTML = '';
-  container.appendChild(table);
-}
-
-function cycleValeur(val) {
-  if (!val || val === "") return "oui";
-  if (val === "oui") return "non";
-  if (val === "non") return "déjà";
-  if (val === "déjà") return "";
-}
-
-// Chargement domaines (avec paramètre domaine à pré-sélectionner)
-async function chargerDomaines(domaineParDefaut = '') {
-  const select = document.getElementById('domaineSelect');
-  const res = await fetch('/liste-domaines');
-  if (!res.ok) {
-    alert("Erreur lors du chargement des domaines.");
-    return;
-  }
-  const domaines = await res.json();
-  select.innerHTML = '';
-  const optionDefaut = document.createElement('option');
-  optionDefaut.value = '';
-  optionDefaut.textContent = 'Sélectionner un domaine';
-  select.appendChild(optionDefaut);
-
-  for (const domaineObj of domaines) {
-    const option = document.createElement('option');
-    option.value = domaineObj.domaine;
-    option.textContent = domaineObj.domaine;
-    select.appendChild(option);
-  }
-
-  if (domaineParDefaut && domaines.some(d => d.domaine === domaineParDefaut)) {
-    select.value = domaineParDefaut;
-  } else if (domaines.length > 0) {
-    select.value = domaines[0].domaine;
-  }
-
-  if (select.value) {
-    chargerEvaluation(select.value);
-    chargerEtat(select.value);
-  }
-
-  select.addEventListener('change', () => {
-    domaineActuel = select.value;
-    chargerEvaluation(domaineActuel);
-    chargerEtat(domaineActuel);
-  });
-}
-
-// chargerEtat modifié pour prendre domaine (comme avant)
-async function chargerEtat(domaine) {
-  const bouton = document.getElementById('changeEtat');
-  if (!domaine || !bouton) return;
-
-  const res = await fetch(`/evaluation/${encodeURIComponent(domaine)}`);
-  if (!res.ok) {
-    bouton.textContent = "Erreur";
-    bouton.style.backgroundColor = "gray";
-    return;
-  }
-
-  const data = await res.json();
-  const etat = data.etat || "en cours";
-
-  bouton.textContent = etat;
-  bouton.style.backgroundColor = etat === 'terminée' ? 'green' : 'orange';
-}
-
-// Exemple de modification pour changerEtat :
-async function changerEtat() {
-  let domaine = domaineActuel;
-  if (!domaine) return alert("Domaine introuvable.");
-
-  const bouton = document.getElementById('changeEtat');
-  const nouvelEtat = bouton.textContent.trim() === 'en cours' ? 'terminée' : 'en cours';
-
-  try {
-    const res = await fetch(`/update-etat/${encodeURIComponent(domaine)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ etat: nouvelEtat })
-    });
-
-    const data = await res.json();
-
-    if (res.ok) {
-      bouton.textContent = nouvelEtat;
-      bouton.style.backgroundColor = nouvelEtat === 'terminée' ? 'green' : 'orange';
-      if (nouvelEtat === 'terminée') {
-        telechargerJSONFiche(domaine);
+    // Fonction pour charger par id (ton code déjà bon)
+    async function chargerEvaluationParId(id) {
+      const res = await fetch(`/evaluation/${id}`);
+      if (!res.ok) {
+        alert("❌ Erreur lors du chargement des données d'évaluation.");
+        return;
       }
-    } else {
-      alert("Erreur lors de la mise à jour de l'état.");
+      const data = await res.json();
+
+      domaineActuel = data.domaine || "";
+      // Mettre à jour titre, table, etc.
+      afficherEvaluation(data);
     }
-  } catch (err) {
-    alert("Erreur réseau ou interne.");
-  }
-}
 
+    async function chargerCompetencesGlobales(competences) {
+      if (!competences || !competences.length) return {};
 
+      try {
+        const res = await fetch('/api/competences-descriptions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ competences }),
+        });
 
-  
-function griserLesCasesDejaValidees() {
-    const cellules = document.querySelectorAll('#evalTable td'); // Sélectionne toutes les cellules du tableau
+        if (!res.ok) throw new Error('Erreur serveur');
 
-    cellules.forEach(td => {
-        // Si le contenu de la cellule est "déjà"
-        if (td.textContent.trim() === "déjà") {
-            td.innerText = "oui"; // Remplacer "déjà" par "oui"
-            td.style.backgroundColor = "#ccc"; // Colorier la cellule en gris
-            td.style.borderRadius = "0px"; // Enlever les coins arrondis
-            td.classList.add('grise-a-imprimer'); // Ajouter une classe CSS pour imprimer
-        }
-
-        // Remplacer ** L23, E10... ** par du texte en gras
-        td.innerHTML = td.innerHTML.replace(/\*\*(.*?)\*\*/g, '<br><strong>$1</strong>'); // Utiliser des expressions régulières pour trouver le texte entouré de ** et le mettre en <strong>
-    });
-}
-
-document.getElementById("ajouterEleveBtn").addEventListener("click", async () => {
-  let nom = prompt("Prénom de l'élève à ajouter :");
-  if (!nom) return;
-  nom = nom.charAt(0).toUpperCase() + nom.slice(1).toLowerCase();
-
-  let prof = prompt("Prénom du prof associé :");
-  if (!prof) return;
-  prof = prof.charAt(0).toUpperCase() + prof.slice(1).toLowerCase();
-
-  const domaine = domaineActuel; // utilise la variable globale déjà définie
-
-  try {
-    const res = await fetch(`/ajouter-eleve/${encodeURIComponent(domaine)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nom, prof })
-    });
-
-    const data = await res.json();
-
-    if (res.ok) {
-      alert(`✅ ${data.message}`);
-      chargerEvaluation(domaine); // Recharge l'affichage avec le nouvel élève
-    } else {
-      alert(`❌ ${data.message}`);
+        return await res.json();
+      } catch (e) {
+        console.error('Erreur récupération compétences', e);
+        return {};
+      }
     }
-  } catch (err) {
-    console.error("Erreur lors de l'ajout :", err);
-    alert("Erreur réseau.");
-  }
-});
 
-document.getElementById("supprimerEleveBtn").addEventListener("click", async () => {
-  const nom = prompt("Quel élève souhaitez-vous supprimer ? (Prénom exact)");
-  if (!nom) return;
-
-  const domaine = domaineActuel;
-
-  const confirmation = confirm(`❗ Cette action est irréversible. Supprimer ${nom} du domaine "${domaine}" ?`);
-  if (!confirmation) return;
-
-  try {
-    const res = await fetch(`/supprimer-eleve/${encodeURIComponent(domaine)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nom })
-    });
-
-    const data = await res.json();
-
-    if (res.ok) {
-      alert(`✅ ${data.message}`);
-      chargerEvaluation(domaine);
-    } else {
-      alert(`❌ ${data.message}`);
-    }
-  } catch (err) {
-    console.error("Erreur lors de la suppression :", err);
-    alert("Erreur réseau.");
-  }
-});
-
-document.getElementById('ajouterCompetenceBtn').addEventListener('click', async function() {
-    const rawInput = prompt('Veuillez entrer le code de la compétence à ajouter (ex : N199, CAL10) :');
-
-    if (!rawInput) return;
-
-    const competence = rawInput.trim().toUpperCase();
-
-    // Vérifie le format : lettres majuscules suivies de chiffres, sans espace
-    const regex = /^[A-Z]+[0-9]+$/;
-    if (!regex.test(competence)) {
-        alert("❌ Format invalide. Utilisez uniquement des lettres majuscules suivies de chiffres (ex: N199, CAL10).");
+    // Fonction pour charger par domaine
+    async function chargerEvaluation(domaine) {
+      if (!domaine) return;
+      const res = await fetch(`/evaluation/${encodeURIComponent(domaine)}`);
+      if (!res.ok) {
+        alert("Erreur lors du chargement de l'évaluation.");
         return;
+      }
+      const data = await res.json();
+
+      domaineActuel = domaine;
+      afficherEvaluation(data);
     }
 
-    const domaine = domaineActuel;
+    // Affiche les données dans le tableau, extrait commun aux deux chargements
+    async function afficherEvaluation(data) {
+      // data.competences : tableau de codes (ex: ["CAL3", "CAL6", ...])
+      const descriptions = await chargerCompetencesGlobales(data.competences);
 
-    try {
-        const res = await fetch(`/ajouter-competence/${encodeURIComponent(domaine)}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ competence })
+      // Ensuite tu construis ton tableau en utilisant descriptions[code] pour afficher les titres ou tooltips
+      const table = document.createElement('table');
+      table.id = 'evalTable';
+
+      // Exemple en-tête avec descriptions
+      const thead = document.createElement('thead');
+      const tr = document.createElement('tr');
+
+      // Colonne élève
+      tr.appendChild(document.createElement('th')).textContent = 'Élève';
+      // Colonne prof
+      tr.appendChild(document.createElement('th')).textContent = 'Prof';
+
+      // Colonnes compétences
+      for (const code of data.competences) {
+        const th = document.createElement('th');
+        th.textContent = code;
+        if (descriptions[code]) {
+          th.title = descriptions[code]; // tooltip avec description
+        }
+        tr.appendChild(th);
+      }
+      thead.appendChild(tr);
+      table.appendChild(thead);
+
+      // Corps du tableau : parcourir les élèves et leurs scores
+      const tbody = document.createElement('tbody');
+      for (const eleve of data.eleves) {
+        const tr = document.createElement('tr');
+        tr.appendChild(document.createElement('td')).textContent = eleve.nom;
+        tr.appendChild(document.createElement('td')).textContent = eleve.prof;
+
+        for (const code of data.competences) {
+          const td = document.createElement('td');
+          const score = data.scores[eleve.nom]?.[code] ?? '';
+          td.textContent = score;
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+      }
+      table.appendChild(tbody);
+
+      
+      // Ajouter le tableau au DOM
+      const container = document.getElementById('evaluation-container');
+      console.log('container =', container);
+      if (!container) {
+        alert("⚠️ Le conteneur 'evaluation-container' est introuvable.");
+        return;
+      }
+      container.innerHTML = '';
+
+      container.appendChild(table);
+    }
+
+    function cycleValeur(val) {
+      if (!val || val === "") return "oui";
+      if (val === "oui") return "non";
+      if (val === "non") return "déjà";
+      if (val === "déjà") return "";
+    }
+
+    // Chargement domaines (avec paramètre domaine à pré-sélectionner)
+    async function chargerDomaines(domaineParDefaut = '') {
+      const select = document.getElementById('domaineSelect');
+      const res = await fetch('/liste-domaines');
+      if (!res.ok) {
+        alert("Erreur lors du chargement des domaines.");
+        return;
+      }
+      const domaines = await res.json();
+      select.innerHTML = '';
+      const optionDefaut = document.createElement('option');
+      optionDefaut.value = '';
+      optionDefaut.textContent = 'Sélectionner un domaine';
+      select.appendChild(optionDefaut);
+
+      for (const domaineObj of domaines) {
+        const option = document.createElement('option');
+        option.value = domaineObj.domaine;
+        option.textContent = domaineObj.domaine;
+        select.appendChild(option);
+      }
+
+      if (domaineParDefaut && domaines.some(d => d.domaine === domaineParDefaut)) {
+        select.value = domaineParDefaut;
+      } else if (domaines.length > 0) {
+        select.value = domaines[0].domaine;
+      }
+
+      if (select.value) {
+        chargerEvaluation(select.value);
+        chargerEtat(select.value);
+      }
+
+      select.addEventListener('change', () => {
+        domaineActuel = select.value;
+        chargerEvaluation(domaineActuel);
+        chargerEtat(domaineActuel);
+      });
+    }
+
+    // chargerEtat modifié pour prendre domaine (comme avant)
+    async function chargerEtat(domaine) {
+      const bouton = document.getElementById('changeEtat');
+      if (!domaine || !bouton) return;
+
+      const res = await fetch(`/evaluation/${encodeURIComponent(domaine)}`);
+      if (!res.ok) {
+        bouton.textContent = "Erreur";
+        bouton.style.backgroundColor = "gray";
+        return;
+      }
+
+      const data = await res.json();
+      const etat = data.etat || "en cours";
+
+      bouton.textContent = etat;
+      bouton.style.backgroundColor = etat === 'terminée' ? 'green' : 'orange';
+    }
+
+    // Exemple de modification pour changerEtat :
+    async function changerEtat() {
+      let domaine = domaineActuel;
+      if (!domaine) return alert("Domaine introuvable.");
+
+      const bouton = document.getElementById('changeEtat');
+      const nouvelEtat = bouton.textContent.trim() === 'en cours' ? 'terminée' : 'en cours';
+
+      try {
+        const res = await fetch(`/update-etat/${encodeURIComponent(domaine)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ etat: nouvelEtat })
         });
 
         const data = await res.json();
 
         if (res.ok) {
-            alert(`✅ ${data.message}`);
-            chargerEvaluation(domaine);
+          bouton.textContent = nouvelEtat;
+          bouton.style.backgroundColor = nouvelEtat === 'terminée' ? 'green' : 'orange';
+          if (nouvelEtat === 'terminée') {
+            telechargerJSONFiche(domaine);
+          }
         } else {
-            alert(`❌ ${data.message}`);
+          alert("Erreur lors de la mise à jour de l'état.");
         }
-    } catch (err) {
-        console.error('Erreur:', err);
-        alert("❌ Erreur réseau lors de l'ajout de la compétence.");
-    }
-});
-
-document.getElementById('supprimerCompetenceBtn').addEventListener('click', async function() {
-    // Afficher un prompt pour que l'utilisateur entre le nom de la compétence à supprimer
-    const competence = prompt('Veuillez entrer le nom de la compétence à supprimer :');
-
-    // Vérifier si la compétence est vide
-    if (!competence || competence.trim() === '') {
-        alert('Le nom de la compétence ne peut pas être vide.');
-        return;
+      } catch (err) {
+        alert("Erreur réseau ou interne.");
+      }
     }
 
-    const domaine = domaineActuel;  // Utilise la variable globale `domaineActuel` comme pour les élèves
 
-    const confirmation = confirm(`❗ Cette action est irréversible. Voulez-vous supprimer la compétence "${competence}" du domaine "${domaine}" ?`);
-    if (!confirmation) return;
 
-    try {
-        const res = await fetch(`/supprimer-competence/${encodeURIComponent(domaine)}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ competence: competence })
+      
+    function griserLesCasesDejaValidees() {
+        const cellules = document.querySelectorAll('#evalTable td'); // Sélectionne toutes les cellules du tableau
+
+        cellules.forEach(td => {
+            // Si le contenu de la cellule est "déjà"
+            if (td.textContent.trim() === "déjà") {
+                td.innerText = "oui"; // Remplacer "déjà" par "oui"
+                td.style.backgroundColor = "#ccc"; // Colorier la cellule en gris
+                td.style.borderRadius = "0px"; // Enlever les coins arrondis
+                td.classList.add('grise-a-imprimer'); // Ajouter une classe CSS pour imprimer
+            }
+
+            // Remplacer ** L23, E10... ** par du texte en gras
+            td.innerHTML = td.innerHTML.replace(/\*\*(.*?)\*\*/g, '<br><strong>$1</strong>'); // Utiliser des expressions régulières pour trouver le texte entouré de ** et le mettre en <strong>
+        });
+    }
+
+    document.getElementById("ajouterEleveBtn").addEventListener("click", async () => {
+      let nom = prompt("Prénom de l'élève à ajouter :");
+      if (!nom) return;
+      nom = nom.charAt(0).toUpperCase() + nom.slice(1).toLowerCase();
+
+      let prof = prompt("Prénom du prof associé :");
+      if (!prof) return;
+      prof = prof.charAt(0).toUpperCase() + prof.slice(1).toLowerCase();
+
+      const domaine = domaineActuel; // utilise la variable globale déjà définie
+
+      try {
+        const res = await fetch(`/ajouter-eleve/${encodeURIComponent(domaine)}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nom, prof })
         });
 
         const data = await res.json();
 
         if (res.ok) {
-            alert(`✅ ${data.message}`);
-            chargerEvaluation(domaine); // Recharger l'évaluation avec la compétence supprimée
+          alert(`✅ ${data.message}`);
+          chargerEvaluation(domaine); // Recharge l'affichage avec le nouvel élève
         } else {
-            alert(`❌ ${data.message}`);
+          alert(`❌ ${data.message}`);
         }
-    } catch (err) {
-        console.error('Erreur:', err);
-        alert('Une erreur est survenue lors de la suppression de la compétence.');
+      } catch (err) {
+        console.error("Erreur lors de l'ajout :", err);
+        alert("Erreur réseau.");
+      }
+    });
+
+    document.getElementById("supprimerEleveBtn").addEventListener("click", async () => {
+      const nom = prompt("Quel élève souhaitez-vous supprimer ? (Prénom exact)");
+      if (!nom) return;
+
+      const domaine = domaineActuel;
+
+      const confirmation = confirm(`❗ Cette action est irréversible. Supprimer ${nom} du domaine "${domaine}" ?`);
+      if (!confirmation) return;
+
+      try {
+        const res = await fetch(`/supprimer-eleve/${encodeURIComponent(domaine)}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nom })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          alert(`✅ ${data.message}`);
+          chargerEvaluation(domaine);
+        } else {
+          alert(`❌ ${data.message}`);
+        }
+      } catch (err) {
+        console.error("Erreur lors de la suppression :", err);
+        alert("Erreur réseau.");
+      }
+    });
+
+    document.getElementById('ajouterCompetenceBtn').addEventListener('click', async function() {
+        const rawInput = prompt('Veuillez entrer le code de la compétence à ajouter (ex : N199, CAL10) :');
+
+        if (!rawInput) return;
+
+        const competence = rawInput.trim().toUpperCase();
+
+        // Vérifie le format : lettres majuscules suivies de chiffres, sans espace
+        const regex = /^[A-Z]+[0-9]+$/;
+        if (!regex.test(competence)) {
+            alert("❌ Format invalide. Utilisez uniquement des lettres majuscules suivies de chiffres (ex: N199, CAL10).");
+            return;
+        }
+
+        const domaine = domaineActuel;
+
+        try {
+            const res = await fetch(`/ajouter-competence/${encodeURIComponent(domaine)}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ competence })
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                alert(`✅ ${data.message}`);
+                chargerEvaluation(domaine);
+            } else {
+                alert(`❌ ${data.message}`);
+            }
+        } catch (err) {
+            console.error('Erreur:', err);
+            alert("❌ Erreur réseau lors de l'ajout de la compétence.");
+        }
+    });
+
+    document.getElementById('supprimerCompetenceBtn').addEventListener('click', async function() {
+        // Afficher un prompt pour que l'utilisateur entre le nom de la compétence à supprimer
+        const competence = prompt('Veuillez entrer le nom de la compétence à supprimer :');
+
+        // Vérifier si la compétence est vide
+        if (!competence || competence.trim() === '') {
+            alert('Le nom de la compétence ne peut pas être vide.');
+            return;
+        }
+
+        const domaine = domaineActuel;  // Utilise la variable globale `domaineActuel` comme pour les élèves
+
+        const confirmation = confirm(`❗ Cette action est irréversible. Voulez-vous supprimer la compétence "${competence}" du domaine "${domaine}" ?`);
+        if (!confirmation) return;
+
+        try {
+            const res = await fetch(`/supprimer-competence/${encodeURIComponent(domaine)}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ competence: competence })
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                alert(`✅ ${data.message}`);
+                chargerEvaluation(domaine); // Recharger l'évaluation avec la compétence supprimée
+            } else {
+                alert(`❌ ${data.message}`);
+            }
+        } catch (err) {
+            console.error('Erreur:', err);
+            alert('Une erreur est survenue lors de la suppression de la compétence.');
+        }
+    });
+
+
+    // ------------------------------------------ mettre en tableau CSV ----------------------------------------------
+    document.getElementById('exportCSVBtn').addEventListener('click', function () {
+      const table = document.getElementById('evalTable');
+      const rows = Array.from(table.querySelectorAll('tr'));
+      
+      // Générer le contenu CSV
+      const csv = rows.map(row => {
+        const cells = Array.from(row.querySelectorAll('th, td'));
+        return cells.map(cell => `"${cell.textContent.trim()}"`).join(',');
+      }).join('\n');
+
+      // Ajouter BOM pour UTF-8
+      const BOM = '\uFEFF';
+      const csvWithBOM = BOM + csv;
+
+      // Créer un Blob avec encodage UTF-8
+      const blob = new Blob([csvWithBOM], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+
+      // Créer un lien de téléchargement
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `evaluation_${domaineActuel.replace(/\s+/g, '_')}.csv`; // Nom du fichier basé sur le domaine
+      document.body.appendChild(a);
+      a.click(); // Lancer le téléchargement
+      document.body.removeChild(a); // Supprimer le lien une fois le téléchargement lancé
+      griserLesCasesDejaValidees();
+    });
+
+    // ------------------------------------------ télécharger le fichier .JSON-------------------------------------
+    async function telechargerJSONFiche(domaine) {
+      alert('Un fichier de sauvegarde va être téléchargé, par précaution.');
+      try {
+        const res = await fetch(`/evaluations/${encodeURIComponent(domaine)}.json`);
+        if (!res.ok) throw new Error("Erreur de récupération du fichier");
+
+        const data = await res.json();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${domaine}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error("Erreur lors du téléchargement :", err);
+        alert("Impossible de sauvegarder le fichier.");
+      }
     }
-});
 
 
-// ------------------------------------------ mettre en tableau CSV ----------------------------------------------
-document.getElementById('exportCSVBtn').addEventListener('click', function () {
-  const table = document.getElementById('evalTable');
-  const rows = Array.from(table.querySelectorAll('tr'));
-  
-  // Générer le contenu CSV
-  const csv = rows.map(row => {
-    const cells = Array.from(row.querySelectorAll('th, td'));
-    return cells.map(cell => `"${cell.textContent.trim()}"`).join(',');
-  }).join('\n');
+    // ------------------------------------------ PRINT ----------------------------------------------
+    function imprimer() {
+        // Lancer l'impression
+        window.print();
+    }
 
-  // Ajouter BOM pour UTF-8
-  const BOM = '\uFEFF';
-  const csvWithBOM = BOM + csv;
+    window.addEventListener("beforeprint", (evenement) => {
+      griserLesCasesDejaValidees();
+    });
 
-  // Créer un Blob avec encodage UTF-8
-  const blob = new Blob([csvWithBOM], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-
-  // Créer un lien de téléchargement
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `evaluation_${domaineActuel.replace(/\s+/g, '_')}.csv`; // Nom du fichier basé sur le domaine
-  document.body.appendChild(a);
-  a.click(); // Lancer le téléchargement
-  document.body.removeChild(a); // Supprimer le lien une fois le téléchargement lancé
-  griserLesCasesDejaValidees();
-});
-
-// ------------------------------------------ télécharger le fichier .JSON-------------------------------------
-async function telechargerJSONFiche(domaine) {
-  alert('Un fichier de sauvegarde va être téléchargé, par précaution.');
-  try {
-    const res = await fetch(`/evaluations/${encodeURIComponent(domaine)}.json`);
-    if (!res.ok) throw new Error("Erreur de récupération du fichier");
-
-    const data = await res.json();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${domaine}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  } catch (err) {
-    console.error("Erreur lors du téléchargement :", err);
-    alert("Impossible de sauvegarder le fichier.");
-  }
-}
-
-
-// ------------------------------------------ PRINT ----------------------------------------------
-function imprimer() {
-    // Lancer l'impression
-    window.print();
-}
-
-window.addEventListener("beforeprint", (evenement) => {
-  griserLesCasesDejaValidees();
-});
-
-
-
-
-
-
-
-</script>
-
-<script>
     // Vérifie avec le serveur si l'utilisateur est connecté
     fetch('/api/check-session')
       .then(res => {
@@ -712,6 +715,7 @@ window.addEventListener("beforeprint", (evenement) => {
       .catch(() => {
         window.location.href = '/login';
       });
+});
   </script>
 </body>
 </html>
