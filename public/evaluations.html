@@ -274,7 +274,7 @@ select {
 
     // Charger les évaluations depuis ton backend adapté à ta DB
     async function chargerEvaluations() {
-      const res = await fetch("/api/evaluations");  // <-- Modifie ici selon ton API backend qui renvoie evaluations complètes
+      const res = await fetch("/liste-domaines");  
       if (!res.ok) return;
 
       evaluations = await res.json();
