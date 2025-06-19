@@ -377,8 +377,8 @@ app.get('/liste-eleves', requireAuth, async (req, res) => {
   }
 });
 
-// Route pour servir competences.json
-app.get('/competences', (req, res) => {
+// Route pour servir competences.json pour eval-setup
+app.get('/competences-setup', (req, res) => {
     const filePath = path.join(__dirname, 'public', 'competences','competences.json'); 
   
     fs.readFile(filePath, 'utf8', (err, data) => {
@@ -396,6 +396,21 @@ app.get('/competences', (req, res) => {
       }
     });
   });
+
+  app.get('/competences', async (req, res) => {
+  try {
+    const result = await pool.query(`SELECT code, description FROM competences_globales`);
+    const competences = {};
+    result.rows.forEach(row => {
+      competences[row.code] = row.description;
+    });
+    res.json({ competences });
+  } catch (err) {
+    console.error("Erreur récupération compétences globales :", err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 
 app.listen(PORT, () => {
   console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);

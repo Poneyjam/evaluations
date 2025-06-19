@@ -428,7 +428,7 @@ async function afficherCompetences() {
   }
 
   try {
-    const res = await fetch("/competences");
+    const res = await fetch("/competences-setup");
     const data = await res.json();
 
     const map = data.competences; // Récupérer l'objet des compétences
