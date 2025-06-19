@@ -257,6 +257,45 @@ app.post('/update-score', requireAuth, async (req, res) => {
   }
 });
 
+app.post('/update-score-id/:domaine/:eleveId/:competence', async (req, res) => {
+  const { domaine, eleveId, competence } = req.params;
+  const { note } = req.body;
+
+  try {
+    const evalResult = await db.query(
+      'SELECT id FROM evaluations WHERE domaine = $1',
+      [domaine]
+    );
+
+    const evaluationId = evalResult.rows[0]?.id;
+    if (!evaluationId) return res.status(404).json({ error: "Évaluation non trouvée." });
+
+    const existing = await db.query(
+      'SELECT id FROM scores WHERE evaluation_id = $1 AND eleve_id = $2 AND competence = $3',
+      [evaluationId, eleveId, competence]
+    );
+
+    if (existing.rows.length > 0) {
+      // Mise à jour
+      await db.query(
+        'UPDATE scores SET note = $1 WHERE evaluation_id = $2 AND eleve_id = $3 AND competence = $4',
+        [note, evaluationId, eleveId, competence]
+      );
+    } else {
+      // Insertion
+      await db.query(
+        'INSERT INTO scores (evaluation_id, eleve_id, competence, note) VALUES ($1, $2, $3, $4)',
+        [evaluationId, eleveId, competence, note]
+      );
+    }
+
+    res.json({ message: '✅ Score mis à jour' });
+  } catch (err) {
+    console.error('Erreur update-score-id :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // Mise à jour commentaire
 app.post('/update-commentaire', requireAuth, async (req, res) => {
   const { evaluation_id, eleve_id, commentaire } = req.body;
@@ -283,6 +322,43 @@ app.post('/update-commentaire', requireAuth, async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Erreur lors de la mise à jour du commentaire' });
+  }
+});
+
+app.post('/update-commentaire-id/:domaine/:eleveId', async (req, res) => {
+  const { domaine, eleveId } = req.params;
+  const { commentaire } = req.body;
+
+  try {
+    const evalResult = await db.query(
+      'SELECT id FROM evaluations WHERE domaine = $1',
+      [domaine]
+    );
+
+    const evaluationId = evalResult.rows[0]?.id;
+    if (!evaluationId) return res.status(404).json({ error: "Évaluation non trouvée." });
+
+    const existing = await db.query(
+      'SELECT id FROM scores WHERE evaluation_id = $1 AND eleve_id = $2 AND competence = $3',
+      [evaluationId, eleveId, 'commentaire']
+    );
+
+    if (existing.rows.length > 0) {
+      await db.query(
+        'UPDATE scores SET note = $1 WHERE evaluation_id = $2 AND eleve_id = $3 AND competence = $4',
+        [commentaire, evaluationId, eleveId, 'commentaire']
+      );
+    } else {
+      await db.query(
+        'INSERT INTO scores (evaluation_id, eleve_id, competence, note) VALUES ($1, $2, $3, $4)',
+        [evaluationId, eleveId, 'commentaire', commentaire]
+      );
+    }
+
+    res.json({ commentaire });
+  } catch (err) {
+    console.error('Erreur update-commentaire-id :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
