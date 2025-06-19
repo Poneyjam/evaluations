@@ -256,236 +256,190 @@ th:not(:has(> span.commentaire-header)) {
 
 
 <script>
-    
-    // variables globales pour personnaliser l'impression de la page
-    let domaineActuel = "";
-    let periodeActuelle = "";
-    let nomDuGroupe = "";
+let domaineActuel = "";
+let evalId = null;
 
-    let competencesUtilisees;
-    
-    
-    // Lire domaine depuis l'URL
-    const params = new URLSearchParams(window.location.search);
-    const domaineParam = params.get("domaine");
-    if (domaineParam) {
-        //chargerEvaluation(domaineParam);
-    }
+// Au chargement, vérifier si id dans URL
+const params = new URLSearchParams(window.location.search);
+evalId = params.get("id");
+const domaineParam = params.get("domaine");
 
-    // Charger les données du domaine sélectionné
-    async function chargerEvaluation(domaine) {
-      const response = await fetch(`/evaluations/${domaine}.json`);
-      if (!response.ok) {
-        alert("Erreur lors du chargement des données.");
-        return;
-      }
-
-      const data = await response.json();
-
-        // Mémoriser domaine et période globalement
-        domaineActuel = data.domaine;
-
-        // Mettre à jour le titre dynamiquement
-        document.getElementById('evalTitle').innerText = `${domaineActuel}`;
-
-      const table = document.getElementById('evalTable');
-      const thead = table.querySelector('thead');
-      const tbody = table.querySelector('tbody');
-      thead.innerHTML = '';
-      tbody.innerHTML = '';
-
-      const competences = data.competences;
-      const descriptions = await chargerCompetencesGlobales(competences);
-      
-
-      const scores = data.scores;
-      const eleves = data.eleves;
-
-      // En-tête
-      let headRow = '<tr><th>Élève</th><th>Prof</th>';
-
-        for (const comp of competences) {
-            if (comp === "commentaire") {
-                headRow += `<th><span class="commentaire-header">${comp}</span></th>`;
-            } else {
-                const desc = descriptions[comp] || "";
-                headRow += `<th title="${desc}">${comp}</th>`;
-            }
-        }
-        headRow += '</tr>';
-        thead.innerHTML = headRow;
-
-
-
-      // Corps du tableau
-      for (const eleveObj of eleves) {
-        const nom = eleveObj.nom;
-        const prof = eleveObj.prof;
-        const ligne = document.createElement('tr');
-
-        ligne.innerHTML = `<td>${nom}</td><td>${prof}</td>`;
-        for (const comp of competences) {
-          const td = document.createElement('td');
-          let val = scores[nom]?.[comp] ?? '';
-          // Si pas encore renseigné, aller vérifier les périodes précédentes
-          if (!val && comp !== "commentaire") {
-            try {
-              const res = await fetch(`/deja-valide/${encodeURIComponent(nom)}/${encodeURIComponent(comp)}?periode=${encodeURIComponent(data.periode)}`);
-              const { deja } = await res.json();
-              if (deja) {
-                val = "déjà";
-              }
-            } catch (err) {
-              console.error("Erreur lors de la vérification déjà validée ou non :", err);
-            }
-          }
-
-          td.textContent = val;
-          td.dataset.eleve = nom;
-          td.dataset.comp = comp;
-
-          // Ajout du comportement clic
-          td.addEventListener('click', function () {
-            const eleve = this.dataset.eleve;
-            const comp = this.dataset.comp;
-            const actuel = this.textContent.trim();
-
-            if (comp === 'commentaire') {
-              const baseCommentaire = actuel.split("**Compétences validées")[0]?.trim() || "";
-              const nouveau = prompt("Entrer un commentaire :", baseCommentaire);
-              if (nouveau === null) return;
-
-              fetch(`/update-commentaire/${domaine}/${eleve}`, {
-                method: "POST",
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ commentaire: nouveau })
-              })
-              .then(res => res.json())
-              .then(data => {
-                this.textContent = data.commentaire;
-              });
-
-            } else {
-              const prochaineValeur = cycleValeur(actuel);
-              fetch(`/update-score/${domaine}/${eleve}/${comp}`, {
-                method: "POST",
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ valeur: prochaineValeur })
-              })
-              .then(() => {
-                this.textContent = prochaineValeur;
-              })
-              .then(() => {
-                this.textContent = prochaineValeur;
-
-                // Mettre à jour dynamiquement le commentaire
-                fetch(`/evaluation/${domaine}`)
-                    .then(res => res.json())
-                    .then(data => {
-                    const commentaire = data.scores[eleve]["commentaire"] || "";
-                    const ligne = this.parentElement;
-                    const cellules = ligne.querySelectorAll("td");
-                    const indexCommentaire = [...cellules].findIndex(td => td.dataset.comp === "commentaire");
-                    if (indexCommentaire !== -1) {
-                        cellules[indexCommentaire].textContent = commentaire;
-                    }
-                    });
-                });
-            }
-          });
-
-          ligne.appendChild(td);
-        }
-
-        tbody.appendChild(ligne);
-      }
-    }
-
-    function cycleValeur(val) {
-      if (!val || val === "") return "oui";
-      if (val === "oui") return "non";
-      if (val === "non") return "déjà";
-      if (val === "déjà") return "";
-    }
-
-// COMPETENCES NOMINATIVES : lecture du fichier competences.json
-async function chargerCompetencesGlobales(competencesUtilisees) {
-    const res = await fetch('/competences/competences.json');
-    if (!res.ok) {
-        console.error("Erreur lors du chargement de competences.json");
-        return {};
-    }
-
-    const data = await res.json();
-    const competencesDictionnaire = data.competences;
-
-    const listeDescriptions = competencesUtilisees
-        .map(cle => {
-            const desc = competencesDictionnaire[cle];
-            return desc ? `<li>${cle} : ${desc}</li>` : null;
-        })
-        .filter(Boolean);
-
-    const compDiv = document.getElementById('competencesSollicitees');
-    compDiv.innerHTML = "<strong>Compétences sollicitées :</strong><ul>" +
-        listeDescriptions.join('') +
-        "</ul>";
-
-    return competencesDictionnaire;
+if (evalId) {
+  // Chargement par id prioritaire
+  chargerEvaluationParId(evalId);
+} else {
+  // Pas d'id, charger domaines et sélectionner domaine (param ou premier)
+  chargerDomaines(domaineParam);
 }
 
+// Fonction pour charger par id (ton code déjà bon)
+async function chargerEvaluationParId(id) {
+  const res = await fetch(`/evaluation/${id}`);
+  if (!res.ok) {
+    alert("❌ Erreur lors du chargement des données d'évaluation.");
+    return;
+  }
+  const data = await res.json();
 
+  domaineActuel = data.domaine || "";
+  // Mettre à jour titre, table, etc.
+  afficherEvaluation(data);
+}
 
-// Charger les domaines disponibles dans le sélecteur
-async function chargerDomaines() {
+// Fonction pour charger par domaine
+async function chargerEvaluation(domaine) {
+  if (!domaine) return;
+  const res = await fetch(`/evaluation/${encodeURIComponent(domaine)}`);
+  if (!res.ok) {
+    alert("Erreur lors du chargement de l'évaluation.");
+    return;
+  }
+  const data = await res.json();
+
+  domaineActuel = domaine;
+  afficherEvaluation(data);
+}
+
+// Affiche les données dans le tableau, extrait commun aux deux chargements
+function afficherEvaluation(data) {
+  document.getElementById('evalTitle').innerText = data.domaine || "";
+
+  const table = document.getElementById('evalTable');
+  const thead = table.querySelector('thead');
+  const tbody = table.querySelector('tbody');
+  thead.innerHTML = '';
+  tbody.innerHTML = '';
+
+  // Récupérer compétences et descriptions
+  chargerCompetencesGlobales(data.competences).then(descriptions => {
+    // Construction en-tête
+    let headRow = '<tr><th>Élève</th><th>Prof</th>';
+    for (const comp of data.competences) {
+      if (comp === "commentaire") {
+        headRow += `<th><span class="commentaire-header">${comp}</span></th>`;
+      } else {
+        const desc = descriptions[comp] || "";
+        headRow += `<th title="${desc}">${comp}</th>`;
+      }
+    }
+    headRow += '</tr>';
+    thead.innerHTML = headRow;
+
+    // Lignes
+    for (const eleve of data.eleves) {
+      const ligne = document.createElement('tr');
+      ligne.innerHTML = `<td>${eleve.nom}</td><td>${eleve.prof}</td>`;
+
+      for (const comp of data.competences) {
+        const td = document.createElement('td');
+        let val = data.scores?.[eleve.nom]?.[comp] ?? '';
+
+        td.textContent = val;
+        td.dataset.eleve = eleve.nom;
+        td.dataset.comp = comp;
+
+        td.addEventListener('click', async function () {
+          const eleve = this.dataset.eleve;
+          const comp = this.dataset.comp;
+          const actuel = this.textContent.trim();
+
+          if (comp === 'commentaire') {
+            const nouveau = prompt("Entrer un commentaire :", actuel);
+            if (nouveau === null) return;
+
+            let url, body;
+            if (evalId) {
+              url = `/update-commentaire-id/${evalId}/${encodeURIComponent(eleve)}`;
+              body = { commentaire: nouveau };
+            } else {
+              url = `/update-commentaire/${encodeURIComponent(domaineActuel)}/${encodeURIComponent(eleve)}`;
+              body = { competence: comp, valeur: nouveau };
+            }
+
+            const res = await fetch(url, {
+              method: "POST",
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body)
+            });
+            const json = await res.json();
+            this.textContent = json.commentaire || nouveau;
+          } else {
+            const prochaineValeur = cycleValeur(actuel);
+
+            let url, body;
+            if (evalId) {
+              url = `/update-score-id/${evalId}/${encodeURIComponent(eleve)}/${encodeURIComponent(comp)}`;
+              body = { valeur: prochaineValeur };
+            } else {
+              url = `/update-score/${encodeURIComponent(domaineActuel)}/${encodeURIComponent(eleve)}/${encodeURIComponent(comp)}`;
+              body = { valeur: prochaineValeur };
+            }
+
+            await fetch(url, {
+              method: "POST",
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body)
+            });
+            this.textContent = prochaineValeur;
+          }
+        });
+
+        ligne.appendChild(td);
+      }
+
+      tbody.appendChild(ligne);
+    }
+  });
+}
+
+function cycleValeur(val) {
+  if (!val || val === "") return "oui";
+  if (val === "oui") return "non";
+  if (val === "non") return "déjà";
+  if (val === "déjà") return "";
+}
+
+// Chargement domaines (avec paramètre domaine à pré-sélectionner)
+async function chargerDomaines(domaineParDefaut = '') {
   const select = document.getElementById('domaineSelect');
   const res = await fetch('/liste-domaines');
-
   if (!res.ok) {
     alert("Erreur lors du chargement des domaines.");
     return;
   }
-
   const domaines = await res.json();
-  
-  // Vider le select avant d'ajouter les nouvelles options
   select.innerHTML = '';
-
-  // Ajouter une option vide par défaut
   const optionDefaut = document.createElement('option');
   optionDefaut.value = '';
   optionDefaut.textContent = 'Sélectionner un domaine';
   select.appendChild(optionDefaut);
 
-  // Ajouter les domaines au select
   for (const domaineObj of domaines) {
     const option = document.createElement('option');
-    option.value = domaineObj.domaine; // Utilise la propriété 'domaine'
-    option.textContent = domaineObj.domaine; // Utilise la propriété 'domaine' pour afficher
+    option.value = domaineObj.domaine;
+    option.textContent = domaineObj.domaine;
     select.appendChild(option);
   }
 
-  // Si l'URL a déjà un domaine, on sélectionne l'option sans recharger
-  const domaineParam = new URLSearchParams(window.location.search).get("domaine");
-  if (domaineParam) {
-    select.value = domaineParam;
-    chargerEvaluation(domaineParam); // Charge les données pour le domaine
-    chargerEtat(domaineParam); // Met à jour l'état du bouton
+  if (domaineParDefaut && domaines.some(d => d.domaine === domaineParDefaut)) {
+    select.value = domaineParDefaut;
   } else if (domaines.length > 0) {
-    select.value = domaines[0].domaine; // Sélectionne le premier domaine par défaut
-    chargerEvaluation(domaines[0].domaine); // Charge les données pour le premier domaine
-    chargerEtat(domaines[0].domaine); // Met à jour l'état du bouton
+    select.value = domaines[0].domaine;
   }
-  select.addEventListener('change', () => {
-    const selectedDomaine = select.value;
-    chargerEvaluation(selectedDomaine);
-    chargerEtat(selectedDomaine); // ✅ ICI le paramètre est bien transmis
-  });
 
+  if (select.value) {
+    chargerEvaluation(select.value);
+    chargerEtat(select.value);
+  }
+
+  select.addEventListener('change', () => {
+    domaineActuel = select.value;
+    chargerEvaluation(domaineActuel);
+    chargerEtat(domaineActuel);
+  });
 }
 
-chargerDomaines();
-
+// chargerEtat modifié pour prendre domaine (comme avant)
 async function chargerEtat(domaine) {
   const bouton = document.getElementById('changeEtat');
   if (!domaine || !bouton) return;
@@ -504,12 +458,9 @@ async function chargerEtat(domaine) {
   bouton.style.backgroundColor = etat === 'terminée' ? 'green' : 'orange';
 }
 
-
-
-// Changer l'état de "en cours" à "terminée"
+// Exemple de modification pour changerEtat :
 async function changerEtat() {
-  const params = new URLSearchParams(window.location.search);
-  const domaine = params.get('domaine');
+  let domaine = domaineActuel;
   if (!domaine) return alert("Domaine introuvable.");
 
   const bouton = document.getElementById('changeEtat');
@@ -527,22 +478,16 @@ async function changerEtat() {
     if (res.ok) {
       bouton.textContent = nouvelEtat;
       bouton.style.backgroundColor = nouvelEtat === 'terminée' ? 'green' : 'orange';
-        if (nouvelEtat === 'terminée'){
-          telechargerJSONFiche(domaine);
-        }
+      if (nouvelEtat === 'terminée') {
+        telechargerJSONFiche(domaine);
+      }
     } else {
-      console.error("Réponse serveur invalide :", data);
       alert("Erreur lors de la mise à jour de l'état.");
     }
   } catch (err) {
-    console.error("Erreur JS/fetch :", err);
     alert("Erreur réseau ou interne.");
   }
 }
-
-
-
-
 
 
 
