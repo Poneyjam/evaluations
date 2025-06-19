@@ -277,21 +277,25 @@ app.get('/liste-eleves', requireAuth, async (req, res) => {
   }
 });
 
-// Liste des compétences
-app.get('/competences', requireAuth, async (req, res) => {
-  try {
-    const result = await pool.query('SELECT code, description FROM competences ORDER BY code');
-    // Envoyer sous forme { competences: { code: description, ... } }
-    const map = {};
-    result.rows.forEach(({ code, description }) => {
-      map[code] = description;
+// Route pour servir competences.json
+app.get('/competences', (req, res) => {
+    const filePath = path.join(__dirname, 'public', 'competences','competences.json'); 
+  
+    fs.readFile(filePath, 'utf8', (err, data) => {
+      if (err) {
+        console.error("Erreur lors de la lecture du fichier competences.json :", err);
+        return res.status(500).json({ error: 'Erreur serveur' });
+      }
+  
+      try {
+        const json = JSON.parse(data);
+        res.json(json);
+      } catch (parseError) {
+        console.error("Erreur de parsing JSON :", parseError);
+        res.status(500).json({ error: 'Format JSON invalide' });
+      }
     });
-    res.json({ competences: map });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
+  });
 
 app.listen(PORT, () => {
   console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
