@@ -324,65 +324,50 @@ th:not(:has(> span.commentaire-header)) {
     }
 
     // Affiche les données dans le tableau, extrait commun aux deux chargements
-    async function afficherEvaluation(data) {
-      console.log("✅ Données reçues :", data);
-      // data.competences : tableau de codes (ex: ["CAL3", "CAL6", ...])
-      const descriptions = await chargerCompetencesGlobales(data.competences);
+async function afficherEvaluation(data) {
+  console.log("✅ Données reçues :", data);
 
-      // Ensuite tu construis ton tableau en utilisant descriptions[code] pour afficher les titres ou tooltips
-      const table = document.createElement('table');
-      table.id = 'evalTable';
+  const competences = data.competences?.length ? data.competences : data.evaluation?.competences || [];
 
-      // Exemple en-tête avec descriptions
-      const thead = document.createElement('thead');
-      const tr = document.createElement('tr');
+  const descriptions = await chargerCompetencesGlobales(competences);
 
-      // Colonne élève
-      tr.appendChild(document.createElement('th')).textContent = 'Élève';
-      // Colonne prof
-      tr.appendChild(document.createElement('th')).textContent = 'Prof';
+  const table = document.createElement('table');
+  const thead = document.createElement('thead');
+  const tr = document.createElement('tr');
 
-      // Colonnes compétences
-      for (const code of data.competences) {
-        const th = document.createElement('th');
-        th.textContent = code;
-        if (descriptions[code]) {
-          th.title = descriptions[code]; // tooltip avec description
-        }
-        tr.appendChild(th);
-      }
-      thead.appendChild(tr);
-      table.appendChild(thead);
+  tr.appendChild(document.createElement('th')).textContent = 'Élève';
+  tr.appendChild(document.createElement('th')).textContent = 'Prof';
 
-      // Corps du tableau : parcourir les élèves et leurs scores
-      const tbody = document.createElement('tbody');
-      for (const eleve of data.eleves) {
-        const tr = document.createElement('tr');
-        tr.appendChild(document.createElement('td')).textContent = eleve.nom;
-        tr.appendChild(document.createElement('td')).textContent = eleve.prof;
+  for (const code of competences) {
+    const th = document.createElement('th');
+    th.textContent = code;
+    if (descriptions[code]) th.title = descriptions[code];
+    tr.appendChild(th);
+  }
+  thead.appendChild(tr);
+  table.appendChild(thead);
 
-        for (const code of data.competences) {
-          const td = document.createElement('td');
-          const score = data.scores[eleve.nom]?.[code] ?? '';
-          td.textContent = score;
-          tr.appendChild(td);
-        }
-        tbody.appendChild(tr);
-      }
-      table.appendChild(tbody);
+  const tbody = document.createElement('tbody');
+  for (const eleve of data.eleves) {
+    const tr = document.createElement('tr');
+    tr.appendChild(document.createElement('td')).textContent = eleve.nom;
+    tr.appendChild(document.createElement('td')).textContent = eleve.prof;
 
-      
-      // Ajouter le tableau au DOM
-      const container = document.getElementById('evaluation-container');
-      console.log('container =', container);
-      if (!container) {
-        alert("⚠️ Le conteneur 'evaluation-container' est introuvable.");
-        return;
-      }
-      container.innerHTML = '';
-
-      container.appendChild(table);
+    for (const code of competences) {
+      const td = document.createElement('td');
+      const score = data.scores?.find(s => s.nom === eleve.nom && s.competence === code)?.valeur || '';
+      td.textContent = score;
+      tr.appendChild(td);
     }
+    tbody.appendChild(tr);
+  }
+
+  table.appendChild(tbody);
+
+  const container = document.getElementById('evaluation-container');
+  container.innerHTML = '';
+  container.appendChild(table);
+}
 
     function cycleValeur(val) {
       if (!val || val === "") return "oui";
