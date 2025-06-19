@@ -101,38 +101,28 @@ app.get('/api/check-session', (req, res) => {
 
 // --- API pour gérer évaluations, élèves, scores, commentaires ---
 
-app.post('/competences-descriptions', (req, res) => {
+app.post('/api/competences-descriptions', async (req, res) => {
   const { competences } = req.body;
-  if (!Array.isArray(competences)) {
-    return res.status(400).json({ error: "Le champ 'competences' doit être un tableau." });
+  if (!Array.isArray(competences)) return res.status(400).json({ error: 'Invalid competences array' });
+
+  try {
+    const data = await fs.readFile(path.join(__dirname, 'public/competences/competences.json'), 'utf-8');
+    const allCompetences = JSON.parse(data).competences;
+
+    // Filtrer uniquement les descriptions des compétences demandées
+    const descriptions = {};
+    competences.forEach(code => {
+      if (allCompetences[code]) {
+        descriptions[code] = allCompetences[code];
+      }
+    });
+
+    res.json(descriptions);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
-
-  const filePath = path.join(__dirname, 'public', 'competences', 'competences.json');
-
-  fs.readFile(filePath, 'utf8', (err, data) => {
-    if (err) {
-      console.error('Erreur lecture fichier compétences :', err);
-      return res.status(500).json({ error: "Erreur serveur lors de la lecture des compétences." });
-    }
-
-    let allCompetences;
-    try {
-      allCompetences = JSON.parse(data).competences;
-    } catch (parseErr) {
-      console.error('Erreur parsing JSON compétences :', parseErr);
-      return res.status(500).json({ error: "Erreur serveur lors du parsing des compétences." });
-    }
-
-    // Construire résultat avec les descriptions demandées
-    const result = {};
-    for (const comp of competences) {
-      result[comp] = allCompetences[comp] || "Description non disponible";
-    }
-
-    res.json(result);
-  });
 });
-
 
 // Liste des évaluations
 app.get('/liste-domaines', requireAuth, async (req, res) => {

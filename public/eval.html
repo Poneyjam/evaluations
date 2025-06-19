@@ -287,30 +287,23 @@ async function chargerEvaluationParId(id) {
 }
 
 async function chargerCompetencesGlobales(competences) {
-  if (!Array.isArray(competences) || competences.length === 0) {
-    return {};
-  }
+  if (!competences || !competences.length) return {};
 
   try {
-    const res = await fetch('/competences-descriptions', {
+    const res = await fetch('/api/competences-descriptions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ competences })
+      body: JSON.stringify({ competences }),
     });
 
-    if (!res.ok) {
-      console.error('Erreur lors du chargement des descriptions de compétences');
-      return {};
-    }
+    if (!res.ok) throw new Error('Erreur serveur');
 
-    const descriptions = await res.json();
-    return descriptions;
-  } catch (err) {
-    console.error('Erreur réseau ou autre:', err);
+    return await res.json();
+  } catch (e) {
+    console.error('Erreur récupération compétences', e);
     return {};
   }
 }
-
 
 // Fonction pour charger par domaine
 async function chargerEvaluation(domaine) {
@@ -327,95 +320,55 @@ async function chargerEvaluation(domaine) {
 }
 
 // Affiche les données dans le tableau, extrait commun aux deux chargements
-function afficherEvaluation(data) {
-  document.getElementById('evalTitle').innerText = data.domaine || "";
+async function afficherEvaluation(data) {
+  // data.competences : tableau de codes (ex: ["CAL3", "CAL6", ...])
+  const descriptions = await chargerCompetencesGlobales(data.competences);
 
-  const table = document.getElementById('evalTable');
-  const thead = table.querySelector('thead');
-  const tbody = table.querySelector('tbody');
-  thead.innerHTML = '';
-  tbody.innerHTML = '';
+  // Ensuite tu construis ton tableau en utilisant descriptions[code] pour afficher les titres ou tooltips
+  const table = document.createElement('table');
 
-  // Récupérer compétences et descriptions
-  chargerCompetencesGlobales(data.competences).then(descriptions => {
-    // Construction en-tête
-    let headRow = '<tr><th>Élève</th><th>Prof</th>';
-    for (const comp of data.competences) {
-      if (comp === "commentaire") {
-        headRow += `<th><span class="commentaire-header">${comp}</span></th>`;
-      } else {
-        const desc = descriptions[comp] || "";
-        headRow += `<th title="${desc}">${comp}</th>`;
-      }
+  // Exemple en-tête avec descriptions
+  const thead = document.createElement('thead');
+  const tr = document.createElement('tr');
+
+  // Colonne élève
+  tr.appendChild(document.createElement('th')).textContent = 'Élève';
+  // Colonne prof
+  tr.appendChild(document.createElement('th')).textContent = 'Prof';
+
+  // Colonnes compétences
+  for (const code of data.competences) {
+    const th = document.createElement('th');
+    th.textContent = code;
+    if (descriptions[code]) {
+      th.title = descriptions[code]; // tooltip avec description
     }
-    headRow += '</tr>';
-    thead.innerHTML = headRow;
+    tr.appendChild(th);
+  }
+  thead.appendChild(tr);
+  table.appendChild(thead);
 
-    // Lignes
-    for (const eleve of data.eleves) {
-      const ligne = document.createElement('tr');
-      ligne.innerHTML = `<td>${eleve.nom}</td><td>${eleve.prof}</td>`;
+  // Corps du tableau : parcourir les élèves et leurs scores
+  const tbody = document.createElement('tbody');
+  for (const eleve of data.eleves) {
+    const tr = document.createElement('tr');
+    tr.appendChild(document.createElement('td')).textContent = eleve.nom;
+    tr.appendChild(document.createElement('td')).textContent = eleve.prof;
 
-      for (const comp of data.competences) {
-        const td = document.createElement('td');
-        let val = data.scores?.[eleve.nom]?.[comp] ?? '';
-
-        td.textContent = val;
-        td.dataset.eleve = eleve.nom;
-        td.dataset.comp = comp;
-
-        td.addEventListener('click', async function () {
-          const eleve = this.dataset.eleve;
-          const comp = this.dataset.comp;
-          const actuel = this.textContent.trim();
-
-          if (comp === 'commentaire') {
-            const nouveau = prompt("Entrer un commentaire :", actuel);
-            if (nouveau === null) return;
-
-            let url, body;
-            if (evalId) {
-              url = `/update-commentaire-id/${evalId}/${encodeURIComponent(eleve)}`;
-              body = { commentaire: nouveau };
-            } else {
-              url = `/update-commentaire/${encodeURIComponent(domaineActuel)}/${encodeURIComponent(eleve)}`;
-              body = { competence: comp, valeur: nouveau };
-            }
-
-            const res = await fetch(url, {
-              method: "POST",
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(body)
-            });
-            const json = await res.json();
-            this.textContent = json.commentaire || nouveau;
-          } else {
-            const prochaineValeur = cycleValeur(actuel);
-
-            let url, body;
-            if (evalId) {
-              url = `/update-score-id/${evalId}/${encodeURIComponent(eleve)}/${encodeURIComponent(comp)}`;
-              body = { valeur: prochaineValeur };
-            } else {
-              url = `/update-score/${encodeURIComponent(domaineActuel)}/${encodeURIComponent(eleve)}/${encodeURIComponent(comp)}`;
-              body = { valeur: prochaineValeur };
-            }
-
-            await fetch(url, {
-              method: "POST",
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(body)
-            });
-            this.textContent = prochaineValeur;
-          }
-        });
-
-        ligne.appendChild(td);
-      }
-
-      tbody.appendChild(ligne);
+    for (const code of data.competences) {
+      const td = document.createElement('td');
+      const score = data.scores[eleve.nom]?.[code] ?? '';
+      td.textContent = score;
+      tr.appendChild(td);
     }
-  });
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+
+  // Ajouter le tableau au DOM
+  const container = document.getElementById('evaluation-container');
+  container.innerHTML = '';
+  container.appendChild(table);
 }
 
 function cycleValeur(val) {
