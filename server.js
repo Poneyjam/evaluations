@@ -106,23 +106,23 @@ app.post('/api/competences-descriptions', async (req, res) => {
   if (!Array.isArray(competences)) return res.status(400).json({ error: 'Invalid competences array' });
 
   try {
-    const data = await fs.readFile(path.join(__dirname, 'public/competences/competences.json'), 'utf-8');
-    const allCompetences = JSON.parse(data).competences;
+    const result = await pool.query(
+      `SELECT code, description FROM competences_globales WHERE code = ANY($1::text[])`,
+      [competences]
+    );
 
-    // Filtrer uniquement les descriptions des compétences demandées
     const descriptions = {};
-    competences.forEach(code => {
-      if (allCompetences[code]) {
-        descriptions[code] = allCompetences[code];
-      }
+    result.rows.forEach(row => {
+      descriptions[row.code] = row.description;
     });
 
     res.json(descriptions);
   } catch (err) {
-    console.error(err);
+    console.error('Erreur récupération compétences :', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+
 
 // Liste des évaluations
 app.get('/liste-domaines', requireAuth, async (req, res) => {
