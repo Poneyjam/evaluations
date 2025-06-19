@@ -1,569 +1,250 @@
+// server.js
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
-const path = require('path');
-const fs = require('fs');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
+const db = require('./db');
 
 const app = express();
-app.set('trust proxy', 1); // 1 = fait confiance à l'adresse IP du proxy de front (Render par ex.)
-
-const PORT = 3000;
-
+const PORT = process.env.PORT || 3000;
 const PASSWORD_HASH = process.env.PASSWORD_HASH;
 const SESSION_SECRET = process.env.SESSION_SECRET;
 
+app.set('trust proxy', 1);
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-
 app.use(session({
-    secret: SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
+  secret: SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
 }));
-
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.get('/', (req, res) => {
-  res.redirect('/login');  // racine redirige vers login
-});
+// Auth
+app.get('/', (req, res) => res.redirect('/login'));
+app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 
-app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
-
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  message: 'Trop de tentatives, veuillez réessayer plus tard.'
-});
-
+const loginLimiter = rateLimit({ windowMs: 15*60*1000, max: 5, message: 'Trop de tentatives, veuillez réessayer plus tard.' });
 app.post('/login', loginLimiter, async (req, res) => {
-  const { password } = req.body;
-  const match = await bcrypt.compare(password, PASSWORD_HASH);
-
-  if (match) {
-    req.session.isAdmin = true;
-    res.redirect('/admin');
-  } else {
-    res.send('<h1>Mot de passe incorrect</h1><a href="/login">Retour</a>');
-  }
+  const match = await bcrypt.compare(req.body.password, PASSWORD_HASH);
+  if (match) { req.session.isAdmin = true; res.redirect('/admin'); }
+  else { res.send('<h1>Mot de passe incorrect</h1><a href="/login">Retour</a>'); }
 });
 
-app.get('/admin', (req, res) => {
-  if (req.session.isAdmin) {
-    res.sendFile(path.join(__dirname, 'public', 'evaluations.html'));
-  } else {
-    res.redirect('/login');
-  }
-});
+app.get('/admin', (req, res) => req.session.isAdmin ? res.sendFile(path.join(__dirname, 'public', 'evaluations.html')) : res.redirect('/login'));
+app.get('/logout', (req, res) => req.session.destroy(() => res.redirect('/login')));
+app.get('/api/check-session', (req, res) => req.session.isAdmin ? res.sendStatus(200) : res.sendStatus(401));
 
-app.get('/logout', (req, res) => {
-  req.session.destroy(() => {
-    res.redirect('/login');
-  });
-});
-
-app.get('/api/check-session', (req, res) => {
-  if (req.session.isAdmin) {
-    res.sendStatus(200); // OK, connecté
-  } else {
-    res.sendStatus(401); // Non autorisé, pas connecté
-  }
-});
-
-
-
-
-function getRequestInfo(req) {
-  const ip = req.ip || req.connection.remoteAddress;
-  const now = new Date();
-  const formattedDate = now.toLocaleString('fr-FR', {
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit'
-  });
-  return { formattedDate, ip };
+// Utilities
+async function getEvalId(domaine) {
+  const r = await db.query('SELECT id FROM evaluations WHERE domaine = $1', [domaine]);
+  return r.rows[0]?.id;
+}
+async function getEleveId(nom, prof = null) {
+  const r = await db.query('SELECT id FROM eleves WHERE nom = $1', [nom]);
+  if (r.rows.length) return r.rows[0].id;
+  const ins = await db.query('INSERT INTO eleves (nom, prof) VALUES ($1, $2) RETURNING id', [nom, prof]);
+  return ins.rows[0].id;
 }
 
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-// EVALUATIONS --------------------------------------------------------------------------------------
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-
-app.use('/evaluations', express.static(path.join(__dirname, 'public')));
-
-// Route pour obtenir la liste des éval et leur état ("en cours" ou "terminée")
-app.get('/liste-domaines', (req, res) => {
-    const dir = path.join(__dirname, 'public');
-    if (!fs.existsSync(dir)) return res.json([]);
-  
-    const fichiers = fs.readdirSync(dir).filter(file => file.endsWith('.json'));
-  
-    const domaines = fichiers.map(file => {
-      try {
-        const data = JSON.parse(fs.readFileSync(path.join(dir, file), 'utf-8'));
-        const eleves = data.eleves || [];
-        const prof = eleves.length > 0 && eleves[0].prof ? eleves[0].prof : '—';
-  
-        return {
-          domaine: path.basename(file, '.json'),
-          etat: data.etat || 'inconnu',
-          annee: data.annee || '—',
-          periode: data.periode || '—',
-          prof,
-          eleves
-        };
-      } catch (err) {
-        console.error(`❌ Erreur dans le fichier ${file} :`, err.message);
-        return null; // on ignore les fichiers corrompus
-      }
-    }).filter(Boolean); // on enlève les null
-  
-    res.json(domaines);
-  });
-  
-  
-
-// Route pour changer l'état de l'évaluation ("en cours" ou "terminée")
-app.post('/update-etat/:domaine', (req, res) => {
-    const { domaine } = req.params;
-    const { etat } = req.body;
-    const filePath = path.join(__dirname, 'public', `${domaine}.json`);
-    const { formattedDate, ip } = getRequestInfo(req);
-  
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ error: "Évaluation non trouvée." });
+// Routes SQL
+app.post('/setup-evaluation', async (req, res) => {
+  const { annee, periode, domaine, prof, eleves, competences } = req.body;
+  try {
+    const r = await db.query(
+      `INSERT INTO evaluations (domaine, annee, periode, prof) VALUES ($1,$2,$3,$4) RETURNING id`,
+      [domaine, annee, periode, prof]
+    );
+    const evalId = r.rows[0].id;
+    for (const comp of competences)
+      await db.query(`INSERT INTO competences (evaluation_id, nom) VALUES ($1,$2)`, [evalId, comp]);
+    for (const e of eleves) {
+      const eleveId = await getEleveId(e.nom, e.prof);
+      await db.query(`INSERT INTO evaluation_eleves (evaluation_id, eleve_id) VALUES ($1,$2)`, [evalId, eleveId]);
     }
-  
-    try {
-      const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-      data.etat = etat || "en cours";
-      fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-  
-      console.log(`EVAL -> La fiche "${domaine}" est "${etat}" en date du ${formattedDate} par ${ip}`);
-  
-      res.json({ message: `État mis à jour à "${etat}".` });
-  
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: "Erreur lors de la mise à jour." });
-    }
-  });
-  
-  
-  app.delete('/supprimer-evaluation/:nom', (req, res) => {
-    const { formattedDate, ip } = getRequestInfo(req);
-
-    const nom = req.params.nom;
-    const fichier = path.join(__dirname, 'public', `${nom}.json`);
-  
-    if (!fs.existsSync(fichier)) {
-      return res.status(404).json({ message: "Fichier introuvable." });
-    }
-  
-    try {
-      fs.unlinkSync(fichier);
-      res.json({ message: "Évaluation supprimée." });
-      console.log(`EVAL -> fiche "${nom}" supprimée le ${formattedDate} par ${ip}`);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: "Erreur lors de la suppression." });
-    }
-  });
-  
-
-  
-// Route pour créer une page d'évaluation par domaine
-app.post('/setup-evaluation', (req, res) => {
-    const { formattedDate, ip } = getRequestInfo(req);
-
-    const { annee, periode, domaine, prof, eleves, competences } = req.body;
-    const etat = "en cours";
-    
-    // Nettoyer le domaine en enlevant les mentions de périodes existantes
-    const domaineNettoye = domaine.replace(/\s*-\s*P[1-5]\s*/gi, '').trim();
-    
-    // Vérifier si l'année est déjà incluse dans le domaine
-    let domaineNomComplet = `${annee} - ${domaineNettoye} - ${periode}`;
-    
-    // Si le domaine commence déjà par l'année, on évite de la concaténer à nouveau
-    if (domaineNomComplet.startsWith(annee)) {
-        domaineNomComplet = `${domaineNettoye} - ${periode}`;
-    }
-
-    // Chemin du fichier à créer
-    const filePath = path.join(__dirname, 'public', `${domaineNomComplet}.json`);
-
-    const evaluationData = {
-        annee,
-        periode,
-        domaine: domaineNomComplet,
-        prof,
-        eleves,
-        competences,
-        etat,
-        scores: eleves.reduce((acc, eleveObj) => {
-            acc[eleveObj.nom] = competences.reduce((compAcc, comp) => {
-              compAcc[comp] = null;
-              return compAcc;
-            }, {});
-            return acc;
-          }, {})          
-    };
-
-    // Créer le dossier si nécessaire
-    const dirPath = path.join(__dirname, 'public');
-    if (!fs.existsSync(dirPath)) {
-        fs.mkdirSync(dirPath);
-    }
-
-    // Sauvegarder l'évaluation dans un fichier JSON
-    fs.writeFileSync(filePath, JSON.stringify(evaluationData, null, 2));
-    res.status(200).json({ message: 'Évaluation enregistrée avec succès.' });
-    console.log(`EVAL -> fiche d'évaluation "${domaineNomComplet}" créée le ${formattedDate} par ${ip}`);
+    res.json({ message: "Évaluation créée" });
+  } catch (err) { console.error(err); res.status(500).json({ error: "Erreur création" }); }
 });
 
-
-  
-// Route pour afficher l'évaluation :
-app.get('/evaluation/:domaine', (req, res) => {
-    const { domaine } = req.params;
-    const filePath = path.join(__dirname, 'public', `${domaine}.json`);
-
-    if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ error: `Évaluation pour le domaine ${domaine} non trouvée.` });
-    }
-
-    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    res.json(data);
+app.get('/liste-domaines', async (_, res) => {
+  try {
+    const r = await db.query('SELECT * FROM evaluations ORDER BY id DESC');
+    res.json(r.rows);
+  } catch (err) { console.error(err); res.status(500).json({ error: "Erreur lecture" }); }
 });
 
-// Route pour mettre à jour un score
-app.post('/update-score/:domaine/:eleve/:competence', (req, res) => {
-    const { domaine, eleve, competence } = req.params;
-    const { valeur } = req.body;
-    const filePath = path.join(__dirname, 'public', `${domaine}.json`);
-  
-    if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Fichier non trouvé.' });
-  
-    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    if (!data.scores[eleve]) return res.status(404).json({ error: 'Élève inconnu.' });
-  
-    data.scores[eleve][competence] = valeur;
-  
-    // Recalcul des compétences validées
-    const valides = Object.entries(data.scores[eleve])
-      .filter(([cle, val]) => cle !== "commentaire" && val === "oui")
-      .map(([cle]) => cle);
-  
-    const commentaireActuel = data.scores[eleve]["commentaire"]?.split("**")[0].trim() || "";
-    data.scores[eleve]["commentaire"] = `${commentaireActuel} ** ${valides.join(", ")}**`;
-  
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-    res.json({ message: "Score mis à jour." });
-  });
+app.get('/evaluation/:domaine', async (req, res) => {
+  try {
+    const evalId = await getEvalId(req.params.domaine);
+    if (!evalId) return res.status(404).json({ error: 'Non trouvée' });
 
-// Route mise à jour du commentaire
-app.post('/update-commentaire/:domaine/:eleve', (req, res) => {
-    const { domaine, eleve } = req.params;
-    const { commentaire } = req.body;
-    const filePath = path.join(__dirname, 'public', `${domaine}.json`);
-  
-    if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Fichier non trouvé.' });
-  
-    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    if (!data.scores[eleve]) return res.status(404).json({ error: 'Élève inconnu.' });
-  
-    const valides = Object.entries(data.scores[eleve])
-      .filter(([cle, val]) => cle !== "commentaire" && val === "oui")
-      .map(([cle]) => cle);
-  
-    data.scores[eleve]["commentaire"] = `${commentaire.trim()} ** ${valides.join(", ")}**`;
-  
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-    res.json({ message: "Commentaire mis à jour.", commentaire: data.scores[eleve]["commentaire"] });
-  });
-  
-// Route pour servir competences.json
-app.get('/competences', (req, res) => {
-    const filePath = path.join(__dirname, 'public', 'competences','competences.json'); 
-  
-    fs.readFile(filePath, 'utf8', (err, data) => {
-      if (err) {
-        console.error("Erreur lors de la lecture du fichier competences.json :", err);
-        return res.status(500).json({ error: 'Erreur serveur' });
-      }
-  
-      try {
-        const json = JSON.parse(data);
-        res.json(json);
-      } catch (parseError) {
-        console.error("Erreur de parsing JSON :", parseError);
-        res.status(500).json({ error: 'Format JSON invalide' });
-      }
-    });
-  });
+    const ev = (await db.query('SELECT domaine, annee, periode, prof, etat FROM evaluations WHERE id = $1', [evalId])).rows[0];
+    const eleves = (await db.query(`
+      SELECT e.nom, e.prof FROM eleves e
+      JOIN evaluation_eleves ee ON e.id = ee.eleve_id
+      WHERE ee.evaluation_id = $1
+    `,[evalId])).rows;
+    const comps = (await db.query('SELECT id, nom FROM competences WHERE evaluation_id = $1',[evalId])).rows;
 
-// Route pour charger les élèves qui ont des compétences dans la liste déroulante
-app.get('/liste-eleves', (req, res) => {
-    const dir = path.join(__dirname, 'public');
-    const fichiers = fs.existsSync(dir)
-      ? fs.readdirSync(dir).filter(f => f.endsWith('.json'))
-      : [];
-  
-    const profs = {};
-  
-    fichiers.forEach(fichier => {
-      const data = JSON.parse(fs.readFileSync(path.join(dir, fichier), 'utf-8'));
-      const eleves = data.eleves || [];
-  
-      eleves.forEach(({ nom, prof }) => {
-        if (!prof || !nom) return;
-  
-        if (!profs[prof]) {
-          profs[prof] = new Set();
-        }
-        profs[prof].add(nom);
-      });
+    const scores = {};
+    for (const el of eleves) {
+      scores[el.nom] = {};
+      for (const c of comps) {
+        const r = await db.query(`
+          SELECT valeur FROM scores
+          WHERE evaluation_id=$1 AND eleve_id=(SELECT id FROM eleves WHERE nom=$2) AND competence_id=$3
+        `, [evalId, el.nom, c.id]);
+        scores[el.nom][c.nom] = r.rows[0]?.valeur || null;
+      }
+      const rc = await db.query(`
+        SELECT texte FROM commentaires
+        WHERE evaluation_id=$1 AND eleve_id=(SELECT id FROM eleves WHERE nom=$2)
+      `, [evalId, el.nom]);
+      scores[el.nom]['commentaire'] = rc.rows[0]?.texte || '';
+    }
+    res.json({ ...ev, eleves, competences: comps.map(c=>c.nom), scores });
+  } catch (err) { console.error(err); res.status(500).json({ error: "Erreur" }); }
+});
+
+app.post('/update-score/:domaine/:eleve/:competence', async (req, res) => {
+  try {
+    const evalId = await getEvalId(req.params.domaine);
+    const eleveId = await getEleveId(req.params.eleve);
+    const comp = await db.query(`
+      SELECT id FROM competences WHERE evaluation_id=$1 AND nom=$2
+    `, [evalId, req.params.competence]);
+    if (!comp.rows[0]) return res.status(404).json({ error: 'Compétence introuvable' });
+    const compId = comp.rows[0].id;
+
+    await db.query(`
+      INSERT INTO scores (evaluation_id, eleve_id, competence_id, valeur)
+      VALUES ($1,$2,$3,$4)
+      ON CONFLICT (evaluation_id, eleve_id, competence_id)
+      DO UPDATE SET valeur = EXCLUDED.valeur
+    `, [evalId, eleveId, compId, req.body.valeur]);
+
+    res.json({ message: "Score mis à jour" });
+  } catch (err) { console.error(err); res.status(500).json({ error: "Erreur score" }); }
+});
+
+app.post('/update-commentaire/:domaine/:eleve', async (req, res) => {
+  try {
+    const evalId = await getEvalId(req.params.domaine);
+    const eleveId = await getEleveId(req.params.eleve);
+    await db.query(`
+      INSERT INTO commentaires (evaluation_id, eleve_id, texte)
+      VALUES ($1,$2,$3)
+      ON CONFLICT (evaluation_id, eleve_id)
+      DO UPDATE SET texte = EXCLUDED.texte
+    `, [evalId, eleveId, req.body.commentaire]);
+    res.json({ message: "Commentaire à jour" });
+  } catch (err) { console.error(err); res.status(500).json({ error: "Erreur commentaire" }); }
+});
+
+app.post('/ajouter-eleve/:domaine', async (req, res) => {
+  try {
+    const evalId = await getEvalId(req.params.domaine);
+    const eleveId = await getEleveId(req.body.nom, req.body.prof);
+    await db.query('INSERT INTO evaluation_eleves (evaluation_id, eleve_id) VALUES ($1,$2)', [evalId, eleveId]);
+    res.json({ message: `Élève ${req.body.nom} ajouté.` });
+  } catch (err) { console.error(err); res.status(500).json({ error: "Erreur ajout" }); }
+});
+
+app.post('/supprimer-evaluation/:nom', async (req, res) => {
+  try {
+    await db.query('DELETE FROM evaluations WHERE domaine=$1', [req.params.nom]);
+    res.json({ message: "Évaluation supprimée." });
+  } catch (err) { console.error(err); res.status(500).json({ error: "Erreur suppression" }); }
+});
+
+app.post('/ajouter-competence/:domaine', async (req, res) => {
+  try {
+    const evalId = await getEvalId(req.params.domaine);
+    await db.query('INSERT INTO competences (evaluation_id, nom) VALUES ($1,$2)', [evalId, req.body.competence]);
+    res.json({ message: `Compétence "${req.body.competence}" ajoutée.` });
+  } catch (err) { console.error(err); res.status(500).json({ error: "Erreur compétence" }); }
+});
+
+app.post('/supprimer-competence/:domaine', async (req, res) => {
+  try {
+    const evalId = await getEvalId(req.params.domaine);
+    const comp = await db.query('SELECT id FROM competences WHERE evaluation_id=$1 AND nom=$2', [evalId, req.body.competence]);
+    if (!comp.rows.length) return res.status(400).json({ message: "Compétence inexistante." });
+    const compId = comp.rows[0].id;
+    await db.query('DELETE FROM scores WHERE evaluation_id=$1 AND competence_id=$2', [evalId, compId]);
+    await db.query('DELETE FROM competences WHERE id=$1', [compId]);
+    res.json({ message: `Compétence supprimée.` });
+  } catch (err) { console.error(err); res.status(500).json({ error: "Erreur suppression comp" }); }
+});
+
+// Bonus : listes élèves/compétences/commentaires déjà validées
+app.get('/liste-eleves', async (_, res) => {
+  try {
+    const r = await db.query(`
+      SELECT e.nom, e.prof, ev.domaine FROM eleves e
+      JOIN evaluation_eleves ee ON e.id = ee.eleve_id
+      JOIN evaluations ev ON ee.evaluation_id = ev.id
+    `);
+    const map = {};
+    r.rows.forEach(r=> {
+      map[r.prof] = map[r.prof]||new Set();
+      map[r.prof].add(r.nom);
     });
-  
-    // Convertir les sets en tableaux
     const result = {};
-    for (const [prof, elevesSet] of Object.entries(profs)) {
-      result[prof] = Array.from(elevesSet).sort();
-    }
-  
+    for (const [prof, s] of Object.entries(map))
+      result[prof] = Array.from(s).sort();
     res.json(result);
-  });
-  
-// Route pour obtenir les compétences d'un élève avec l'année et la période
-app.get('/competences-eleve/:nom', (req, res) => {
-    const { nom } = req.params;  // nom de l'élève
-    const { annee, periode } = req.query;  // paramètres pour l'année et la période
-    const dir = path.join(__dirname, 'public');
-  
-    if (!fs.existsSync(dir)) {
-      return res.status(404).json({ competences: [] });
-    }
-  
-    const fichiers = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
-    const competencesOui = new Set();
-  
-    fichiers.forEach(fichier => {
-      const chemin = path.join(dir, fichier);
-      const data = JSON.parse(fs.readFileSync(chemin, 'utf-8'));
-  
-      const scores = data.scores || {};
-      const competences = data.competences || [];
-  
-      // On vérifie si l'élève correspond et si l'année et la période matchent
-      if (data.annee === annee && data.periode === periode) {
-        Object.keys(scores).forEach(nomEleve => {
-          if (nomEleve.toLowerCase() === nom.toLowerCase()) {
-            competences.forEach(comp => {
-              if (comp !== 'commentaire' && scores[nomEleve][comp] === "oui") {
-                competencesOui.add(comp);
-              }
-            });
-          }
-        });
-      }
-    });
-  
-    res.json({ competences: Array.from(competencesOui) });
-  });
+  } catch (err) { console.error(err); res.status(500).json({ error: "Erreur liste élèves" }); }
+});
 
-  // Route pour récupérer tous les commentaires d'un élève sur une année et une période
-app.get('/commentaires-eleve', (req, res) => {
+app.get('/competences-eleve/:nom', async (req, res) => {
+  try {
+    const { annee, periode } = req.query;
+    const r = await db.query(`
+      SELECT c.nom FROM scores s
+      JOIN evaluations ev ON s.evaluation_id=ev.id
+      JOIN competences c ON s.competence_id=c.id
+      JOIN eleves e ON s.eleve_id=e.id
+      WHERE LOWER(e.nom)=LOWER($1) AND ev.annee=$2 AND ev.periode=$3 AND s.valeur='oui'
+    `, [req.params.nom, annee, periode]);
+    res.json({ competences: r.rows.map(r=>r.nom) });
+  } catch (err) { console.error(err); res.status(500).json({ error: "Erreur compétences élève" }); }
+});
+
+app.get('/commentaires-eleve', async (req, res) => {
+  try {
     const { eleve, annee, periode } = req.query;
-    const dir = path.join(__dirname, 'public');
-
-    if (!fs.existsSync(dir)) return res.status(404).send("Aucun dossier d'évaluations.");
-
-    const fichiers = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
-    let commentaires = [];
-
-    fichiers.forEach(fichier => {
-        const data = JSON.parse(fs.readFileSync(path.join(dir, fichier), 'utf-8'));
-
-        if (data.annee === annee && data.periode === periode && data.scores && data.scores[eleve]) {
-            const commentaire = data.scores[eleve].commentaire?.trim();
-            if (commentaire) {
-                commentaires.push(`${data.domaine}\n${commentaire}`);
-            }
-        }
-    });
-
-    if (commentaires.length === 0) {
-        return res.status(404).send("Aucun commentaire trouvé.");
-    }
-
-    res.send(commentaires.join("\n\n"));
+    const r = await db.query(`
+      SELECT ev.domaine, co.texte FROM commentaires co
+      JOIN evaluations ev ON co.evaluation_id=ev.id
+      JOIN eleves e ON co.eleve_id=e.id
+      WHERE LOWER(e.nom)=LOWER($1) AND ev.annee=$2 AND ev.periode=$3
+    `, [eleve, annee, periode]);
+    if (!r.rows.length) return res.status(404).send("Aucun commentaire trouvé.");
+    const out = r.rows.map(r=>`${r.domaine}\n${r.texte}`);
+    res.send(out.join('\n\n'));
+  } catch (err) { console.error(err); res.status(500).send("Erreur commentaires"); }
 });
 
-// Vérifie si un élève a déjà validé une compétence dans une période antérieure
-app.get('/deja-valide/:eleve/:competence', (req, res) => {
-    const { eleve, competence } = req.params;
-    const periodeActuelle = req.query.periode;
-    const dir = path.join(__dirname, 'public');
+app.get('/deja-valide/:eleve/:competence', async (req, res) => {
+  try {
+    const { periode } = req.query;
+    const periodes = ["P1","P2","P3","P4","P5"];
+    const idx = periodes.indexOf(periode);
+    if (idx < 0) return res.json({ deja: false });
 
-    const fichiers = fs.existsSync(dir)
-        ? fs.readdirSync(dir).filter(f => f.endsWith('.json'))
-        : [];
-
-    const periodesOrdre = ["P1", "P2", "P3", "P4", "P5"];
-    const indexActuel = periodesOrdre.indexOf(periodeActuelle);
-
-    for (const fichier of fichiers) {
-        const data = JSON.parse(fs.readFileSync(path.join(dir, fichier), 'utf-8'));
-
-        if (
-            data.periode &&
-            periodesOrdre.indexOf(data.periode) < indexActuel &&
-            data.scores &&
-            data.scores[eleve] &&
-            data.scores[eleve][competence] === "oui"
-        ) {
-            return res.json({ deja: true });
-        }
-    }
-
-    res.json({ deja: false });
+    const r = await db.query(`
+      SELECT COUNT(*) FROM scores s
+      JOIN evaluations ev ON s.evaluation_id=ev.id
+      JOIN eleves e ON s.eleve_id=e.id
+      JOIN competences c ON s.competence_id=c.id
+      WHERE LOWER(e.nom)=LOWER($1) AND c.nom=$2 AND s.valeur='oui' AND ev.periode IN (${periodes.slice(0, idx).map((_,i)=>`'${periodes[i]}'`).join(',')})
+    `, [req.params.eleve, req.params.competence]);
+    res.json({ deja: parseInt(r.rows[0].count, 10) > 0 });
+  } catch (err) { console.error(err); res.status(500).json({ deja: false }); }
 });
 
-// Route pour ajouter un élève en cours d'année
-app.post('/ajouter-eleve/:domaine', (req, res) => {
-    const { domaine } = req.params;
-    const { nom, prof } = req.body;
-  
-    const filePath = path.join(__dirname, 'public', `${domaine}.json`);
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ message: "Fiche introuvable." });
-    }
-  
-    const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-  
-    // Vérifie que l'élève n'existe pas déjà
-    if (data.eleves.some(e => e.nom === nom)) {
-      return res.status(400).json({ message: "L'élève existe déjà." });
-    }
-  
-    // Ajouter l'élève
-    data.eleves.push({ nom, prof });
-  
-    // Initialiser ses scores
-    data.scores[nom] = {};
-    for (const comp of data.competences) {
-      data.scores[nom][comp] = null;
-    }
-  
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-    res.status(200).json({ message: `Élève ${nom} ajouté.` });
-  });
-  
-// Route pour supprimer un élève d'une fiche en cours d'année
-app.post('/supprimer-eleve/:domaine', (req, res) => {
-  const { domaine } = req.params;
-  const { nom } = req.body;
-  const filePath = path.join(__dirname, 'public', `${domaine}.json`);
-
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ message: "Fiche introuvable." });
-  }
-
-  const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-
-  const index = data.eleves.findIndex(e => e.nom === nom);
-  if (index === -1) {
-    return res.status(400).json({ message: "Élève non trouvé." });
-  }
-
-  data.eleves.splice(index, 1);
-  delete data.scores[nom];
-
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-  res.status(200).json({ message: `${nom} supprimé avec succès.` });
-});
-
-// Route pour ajouter une compétence supplémentaire dans la fiche d'évaluation déjà créée
-app.post('/ajouter-competence/:domaine', (req, res) => {
-    const { domaine } = req.params;
-    const { competence } = req.body;
-  
-    const filePath = path.join(__dirname, 'public', `${domaine}.json`);
-  
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ message: "Fiche introuvable." });
-    }
-  
-    const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-  
-    if (data.competences.includes(competence)) {
-      return res.status(400).json({ message: "La compétence existe déjà." });
-    }
-  
-    // Ajouter la compétence
-    data.competences.push(competence);
-  
-    // Trier toutes les compétences sauf "commentaire" à la fin
-    data.competences = data.competences
-      .filter(c => c !== "commentaire")
-      .sort((a, b) => a.localeCompare(b, 'fr', { numeric: true }))
-      .concat(data.competences.includes("commentaire") ? ["commentaire"] : []);
-  
-    // Initialiser les scores pour tous les élèves
-    for (const eleve of data.eleves) {
-      if (!data.scores[eleve.nom]) {
-        data.scores[eleve.nom] = {};
-      }
-      data.scores[eleve.nom][competence] = null;
-    }
-  
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-    res.status(200).json({ message: `Compétence "${competence}" ajoutée avec succès.` });
-  });
-  
-
-// Route pour supprimer une compétence d'une fiche d'évaluation déjà existante
-app.post('/supprimer-competence/:domaine', (req, res) => {
-    const { domaine } = req.params;
-    const { competence } = req.body;  // La compétence à supprimer
-
-    const filePath = path.join(__dirname, 'public', `${domaine}.json`);
-    if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ message: "Fiche introuvable." });
-    }
-
-    const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-
-    // Vérifier si la compétence existe dans la liste
-    const competenceIndex = data.competences.indexOf(competence);
-    if (competenceIndex === -1) {
-        return res.status(400).json({ message: "La compétence n'existe pas." });
-    }
-
-    // Supprimer la compétence de la liste
-    data.competences.splice(competenceIndex, 1);
-
-    // Supprimer la compétence des scores de tous les élèves
-    for (const eleve of data.eleves) {
-        if (data.scores[eleve.nom]) {
-            delete data.scores[eleve.nom][competence];
-        }
-    }
-
-    // Sauvegarder les modifications
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-
-    res.status(200).json({ message: `Compétence "${competence}" supprimée avec succès.` });
-});
-
-
-
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-});
-
+// Lancement
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
