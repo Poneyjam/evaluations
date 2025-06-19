@@ -232,16 +232,12 @@ select {
   </style>
 </head>
 <body>
-
-
-
   <h1>📚 Évaluations</h1>
   <ul id="listeEvaluations"></ul>
 
   <hr />
   <button onclick="window.location.href='eval-setup.html';" class="createButton">Créer une nouvelle fiche d'éval</button>
   <hr />
-
 
   <div id="bilans">
     <h1>⚙️ Générer un Bilan</h1>
@@ -268,50 +264,48 @@ select {
     <h1>💬 Commentaires</h1>
     <button class="commentaireButton" onclick="window.location.href='commentaires.html';">🧩 Rassembler</button>
   </div>
-  
-  
-<div id="deconnexion" style="position: absolute; top: 0.6rem; right: 1.6rem;">
-  <a href="/logout" style="text-decoration: none; font-size: 1rem; color: red;">❌ deconnexion</a>
-</div>
 
-
+  <div id="deconnexion" style="position: absolute; top: 0.6rem; right: 1.6rem;">
+    <a href="/logout" style="text-decoration: none; font-size: 1rem; color: red;">❌ deconnexion</a>
+  </div>
 
   <script>
-
     let evaluations = [];
 
+    // Charger les évaluations depuis ton backend adapté à ta DB
     async function chargerEvaluations() {
-  const res = await fetch("/liste-domaines");
-  if (!res.ok) return;
+      const res = await fetch("/api/evaluations");  // <-- Modifie ici selon ton API backend qui renvoie evaluations complètes
+      if (!res.ok) return;
 
-  evaluations = await res.json();
-  console.log("Évaluations chargées :", evaluations);
+      evaluations = await res.json();
+      console.log("Évaluations chargées :", evaluations);
 
-  // Affichage global des évaluations (indépendant des filtres)
-  const listeEvaluations = document.getElementById("listeEvaluations");
-  evaluations.forEach(({ annee, periode, domaine, etat }) => {
-    const li = document.createElement("li");
+      const listeEvaluations = document.getElementById("listeEvaluations");
+      listeEvaluations.innerHTML = "";
 
-    const lien = document.createElement("a");
-    lien.href = `eval.html?domaine=${encodeURIComponent(domaine)}`;
-    lien.textContent = `📝 ${annee} - ${domaine}`;
-    li.appendChild(lien);
+      evaluations.forEach(({ id, annee, periode, domaine, etat }) => {
+        const li = document.createElement("li");
 
-    const etatSpan = document.createElement("span");
-    etatSpan.textContent = `(${etat})`;
-    etatSpan.style.color = etat === "terminée" ? "green" : "orange";
-    li.appendChild(etatSpan);
+        const lien = document.createElement("a");
+        lien.href = `eval.html?id=${id}`;
+        lien.textContent = `📝 ${annee} - ${domaine} (${periode})`;
+        li.appendChild(lien);
 
-    const supprimerBtn = document.createElement("span");
+        const etatSpan = document.createElement("span");
+        etatSpan.textContent = ` (${etat})`;
+        etatSpan.style.color = etat === "terminée" ? "green" : "orange";
+        li.appendChild(etatSpan);
+
+        const supprimerBtn = document.createElement("span");
         supprimerBtn.textContent = "🗑️";
         supprimerBtn.title = "Supprimer cette évaluation";
         supprimerBtn.style.color = "red";
         supprimerBtn.style.cursor = "pointer";
-  
+
         supprimerBtn.onclick = async () => {
           if (confirm(`Supprimer l'évaluation "${domaine}" ?`)) {
-            const res = await fetch(`/supprimer-evaluation/${encodeURIComponent(domaine)}`, { method: 'DELETE' });
-            if (res.ok) {
+            const resDel = await fetch(`/api/evaluations/${id}`, { method: 'DELETE' });
+            if (resDel.ok) {
               li.remove();
             } else {
               alert("Erreur lors de la suppression.");
@@ -320,157 +314,145 @@ select {
         };
 
         li.appendChild(supprimerBtn);
+        listeEvaluations.appendChild(li);
+      });
+    }
 
-    listeEvaluations.appendChild(li);
-  });
-}
-chargerEvaluations();
+    // Charger les options pour générer le bilan
+    async function chargerBilans() {
+      if (evaluations.length === 0) await chargerEvaluations();
 
-
-async function chargerBilans() {
-  const res = await fetch("/liste-domaines");
-  if (!res.ok) return;
-
-  evaluations = await res.json();
-  console.log("Évaluations chargées :", evaluations);
-
-  // Extraire toutes les années sans filtrer par état
-  const annees = [...new Set(evaluations.map(e => e.annee))].sort();
-  console.log("Années disponibles :", annees);
-
-  const selectAnnee = document.getElementById("selectAnnee");
-  selectAnnee.innerHTML = '<option value="">📅  Sélectionner une année </option>';
-
-  annees.forEach(annee => {
-    const option = document.createElement("option");
-    option.value = annee;
-    option.textContent = annee;
-    selectAnnee.appendChild(option);
-  });
-
-  console.log("Options année ajoutées :", selectAnnee.innerHTML);
-
-  selectAnnee.addEventListener("change", function () {
-    const anneeChoisie = this.value;
-    console.log("Année choisie :", anneeChoisie);
-
-    // Extraire les périodes pour l'année choisie
-    const periodes = [...new Set(
-      evaluations.filter(e => e.annee === anneeChoisie).map(e => e.periode)
-    )].sort();
-    console.log("Périodes disponibles pour l'année choisie :", periodes);
-
-    const selectPeriode = document.getElementById("selectPeriode");
-    selectPeriode.innerHTML = '<option value="">🕓 Sélectionner une période </option>';
-    selectPeriode.style.display = "inline-block"; // Assurez-vous que ce sélecteur devient visible
-
-    periodes.forEach(p => {
-      const option = document.createElement("option");
-      option.value = p;
-      option.textContent = p;
-      selectPeriode.appendChild(option);
-    });
-
-    console.log("Options période ajoutées :", selectPeriode.innerHTML);
-
-    document.getElementById("selectProf").style.display = "none";
-    document.getElementById("selectEleve").style.display = "none";
-  });
-
-  document.getElementById("selectPeriode").addEventListener("change", function () {
-    const annee = document.getElementById("selectAnnee").value;
-    const periode = this.value;
-    console.log("Période choisie :", periode);
-
-    // Extraire tous les professeurs uniques pour cette année et période en prenant en compte tous les élèves
-    const profs = [...new Set(
-      evaluations
-        .filter(e => e.annee === annee && e.periode === periode)
-        .flatMap(e => e.eleves.map(el => el.prof)) // On récupère tous les professeurs des élèves
-    )].sort();
-    console.log("Professeurs disponibles pour la période choisie :", profs);
-
-    const selectProf = document.getElementById("selectProf");
-    selectProf.innerHTML = '<option value="">👩‍🏫 Sélectionner un.e prof </option>';
-    selectProf.style.display = "inline-block"; // Assurez-vous que ce sélecteur devient visible
-
-    profs.forEach(p => {
-      const option = document.createElement("option");
-      option.value = p;
-      option.textContent = p;
-      selectProf.appendChild(option);
-    });
-
-    console.log("Options professeur ajoutées :", selectProf.innerHTML);
-
-    document.getElementById("selectEleve").style.display = "none";
-  });
-
-  document.getElementById("selectProf").addEventListener("change", function () {
-    const annee = document.getElementById("selectAnnee").value;
-    const periode = document.getElementById("selectPeriode").value;
-    const prof = this.value;
-    console.log("Professeur choisi :", prof);
-
-    // Extraire les élèves pour l'année, la période et le professeur choisis
-    const elevesSet = new Set();
-    evaluations
-      .filter(e => e.annee === annee && e.periode === periode)
-      .forEach(e => {
-        e.eleves
-          .filter(el => el.prof === prof)  // Filtrer les élèves ayant ce professeur
-          .forEach(el => elevesSet.add(el.nom)); // Ajouter les noms des élèves
+      // Extraire les années uniques
+      const annees = [...new Set(evaluations.map(e => e.annee).filter(a => a))].sort();
+      const selectAnnee = document.getElementById("selectAnnee");
+      selectAnnee.innerHTML = '<option value="">📅 Sélectionner une année</option>';
+      annees.forEach(annee => {
+        const option = document.createElement("option");
+        option.value = annee;
+        option.textContent = annee;
+        selectAnnee.appendChild(option);
       });
 
-    const eleves = [...elevesSet].sort();
-    console.log("Élèves disponibles pour le professeur choisi :", eleves);
+      // Quand on choisit une année
+      selectAnnee.addEventListener("change", () => {
+        const anneeChoisie = selectAnnee.value;
+        const periodes = [...new Set(evaluations.filter(e => e.annee === anneeChoisie).map(e => e.periode).filter(p => p))].sort();
 
-    const selectEleve = document.getElementById("selectEleve");
-    selectEleve.innerHTML = '<option value="">👧 Sélectionner un élève </option>';
-    selectEleve.style.display = "inline-block"; // Assurez-vous que ce sélecteur devient visible
+        const selectPeriode = document.getElementById("selectPeriode");
+        selectPeriode.innerHTML = '<option value="">🕓 Sélectionner une période</option>';
+        periodes.forEach(p => {
+          const option = document.createElement("option");
+          option.value = p;
+          option.textContent = p;
+          selectPeriode.appendChild(option);
+        });
+        selectPeriode.style.display = periodes.length ? "inline-block" : "none";
 
-    eleves.forEach(nom => {
-      const option = document.createElement("option");
-      option.value = nom;
-      option.textContent = nom;
-      selectEleve.appendChild(option);
+        document.getElementById("selectProf").style.display = "none";
+        document.getElementById("selectEleve").style.display = "none";
+      });
+
+      // Quand on choisit une période
+      document.getElementById("selectPeriode").addEventListener("change", function() {
+        const annee = selectAnnee.value;
+        const periode = this.value;
+
+        // Extraire tous les profs pour année+periode en regardant les élèves liés à l'éval
+        // Récupérer toutes les évaluations correspondantes
+        const evalsFiltres = evaluations.filter(e => e.annee === annee && e.periode === periode);
+
+        // Récupérer la liste des élèves liés à ces évaluations
+        // Pour ça, on fait un appel API dédié, ou on suppose que l'API /api/evaluations renvoie aussi les élèves?
+        // Si ce n’est pas le cas, il faut faire une requête API ici pour récupérer les élèves.
+
+        // Supposons que tu as une API /api/eleves?evaluation_id=...
+        async function chargerProfs() {
+          const profSet = new Set();
+
+          for (const evalData of evalsFiltres) {
+            const res = await fetch(`/api/eleves?evaluation_id=${evalData.id}`);
+            if (!res.ok) continue;
+            const eleves = await res.json();
+            eleves.forEach(eleve => {
+              if (eleve.prof) profSet.add(eleve.prof);
+            });
+          }
+
+          const profs = [...profSet].sort();
+          const selectProf = document.getElementById("selectProf");
+          selectProf.innerHTML = '<option value="">👩‍🏫 Sélectionner un prof</option>';
+          profs.forEach(p => {
+            const option = document.createElement("option");
+            option.value = p;
+            option.textContent = p;
+            selectProf.appendChild(option);
+          });
+          selectProf.style.display = profs.length ? "inline-block" : "none";
+          document.getElementById("selectEleve").style.display = "none";
+        }
+
+        chargerProfs();
+      });
+
+      // Quand on choisit un prof
+      document.getElementById("selectProf").addEventListener("change", async function() {
+        const annee = selectAnnee.value;
+        const periode = document.getElementById("selectPeriode").value;
+        const prof = this.value;
+
+        // Récupérer élèves pour cette année, période et prof
+        const evalsFiltres = evaluations.filter(e => e.annee === annee && e.periode === periode);
+        const elevesSet = new Set();
+
+        for (const evalData of evalsFiltres) {
+          const res = await fetch(`/api/eleves?evaluation_id=${evalData.id}&prof=${encodeURIComponent(prof)}`);
+          if (!res.ok) continue;
+          const eleves = await res.json();
+          eleves.forEach(eleve => elevesSet.add(eleve.nom));
+        }
+
+        const eleves = [...elevesSet].sort();
+
+        const selectEleve = document.getElementById("selectEleve");
+        selectEleve.innerHTML = '<option value="">👧 Sélectionner un.e élève</option>';
+        eleves.forEach(nom => {
+          const option = document.createElement("option");
+          option.value = nom;
+          option.textContent = nom;
+          selectEleve.appendChild(option);
+        });
+        selectEleve.style.display = eleves.length ? "inline-block" : "none";
+      });
+    }
+
+    // Redirige vers la page élève avec les bons paramètres
+    function redirigerVersEleve() {
+      const eleve = document.getElementById("selectEleve").value;
+      const annee = document.getElementById("selectAnnee").value;
+      const periode = document.getElementById("selectPeriode").value;
+
+      if (eleve && annee && periode) {
+        window.location.href = `eleve.html?eleve=${encodeURIComponent(eleve)}&annee=${encodeURIComponent(annee)}&periode=${encodeURIComponent(periode)}`;
+      }
+    }
+
+    // Masquer message quand on clique sur année
+    document.getElementById('selectAnnee').addEventListener('click', function(){
+      document.getElementById('message').style.display = "none";
     });
 
-    console.log("Options élève ajoutées :", selectEleve.innerHTML);
-  });
-}
-
-
-chargerBilans();
-  
-function redirigerVersEleve() {
-  const eleve = document.getElementById("selectEleve").value;
-  const annee = document.getElementById("selectAnnee").value;
-  const periode = document.getElementById("selectPeriode").value;
-
-  if (eleve && annee && periode) {
-    window.location.href = `eleve.html?eleve=${encodeURIComponent(eleve)}&annee=${encodeURIComponent(annee)}&periode=${encodeURIComponent(periode)}`;
-  }
-}
-
-
-  document.getElementById('selectAnnee').addEventListener('click', function(){
-    document.getElementById('message').style.display = "none";
-  });
-  </script>
-
-  <script>
-    // Vérifie avec le serveur si l'utilisateur est connecté
+    // Check session
     fetch('/api/check-session')
       .then(res => {
         if (!res.ok) {
-          // Si pas connecté, redirige vers la page de login
           window.location.href = '/login';
         }
       })
-      .catch(() => {
-        window.location.href = '/login';
-      });
+      .catch(() => window.location.href = '/login');
+
+    // Lancement initial
+    chargerEvaluations().then(chargerBilans);
   </script>
 </body>
+
 </html>
