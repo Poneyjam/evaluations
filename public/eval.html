@@ -325,6 +325,7 @@ th:not(:has(> span.commentaire-header)) {
 
     // Affiche les données dans le tableau, extrait commun aux deux chargements
     async function afficherEvaluation(data) {
+      console.log("✅ Données reçues :", data);
       // data.competences : tableau de codes (ex: ["CAL3", "CAL6", ...])
       const descriptions = await chargerCompetencesGlobales(data.competences);
 
