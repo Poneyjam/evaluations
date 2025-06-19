@@ -287,7 +287,7 @@ app.post('/update-commentaire/:domaine/:eleve', (req, res) => {
   
 // Route pour servir competences.json
 app.get('/competences', (req, res) => {
-    const filePath = path.join(__dirname, 'competences.json'); 
+    const filePath = path.join(__dirname, 'public', 'competences','competences.json'); 
   
     fs.readFile(filePath, 'utf8', (err, data) => {
       if (err) {
